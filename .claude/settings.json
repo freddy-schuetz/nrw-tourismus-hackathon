@@ -1,0 +1,53 @@
+{
+  "enabledMcpjsonServers": ["n8n-mcp"],
+  "permissions": {
+    "allow": [
+      "mcp__n8n-mcp__tools_documentation",
+      "mcp__n8n-mcp__n8n_health_check",
+      "mcp__n8n-mcp__n8n_list_workflows",
+      "mcp__n8n-mcp__n8n_get_workflow",
+      "mcp__n8n-mcp__search_nodes",
+      "mcp__n8n-mcp__get_node",
+      "mcp__n8n-mcp__search_templates",
+      "mcp__n8n-mcp__n8n_create_workflow",
+      "mcp__n8n-mcp__n8n_update_partial_workflow",
+      "mcp__n8n-mcp__n8n_validate_workflow",
+      "mcp__n8n-mcp__n8n_autofix_workflow",
+      "mcp__n8n-mcp__n8n_test_workflow",
+      "mcp__n8n-mcp__n8n_executions",
+      "mcp__n8n-mcp__n8n_deploy_template",
+      "Bash(npx -y n8n-mcp:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node:*)",
+      "Bash(node --version)",
+      "Bash(git --version)",
+      "Bash(git clone:*)",
+      "Bash(winget install:*)",
+      "Bash(brew install:*)",
+      "Bash(npx vercel:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo create:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__n8n-mcp__n8n_create_workflow|mcp__n8n-mcp__n8n_update_partial_workflow|mcp__n8n-mcp__n8n_update_full_workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-backup.js\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
