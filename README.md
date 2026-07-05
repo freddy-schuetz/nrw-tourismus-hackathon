@@ -10,7 +10,7 @@ Eine fertige Grundlage, um beim **NRW-Tourismus-Hackathon** ohne Vorerfahrung lo
 
 Öffne die **Claude Code Desktop-App** und schreib:
 
-> **„Richte mir `https://github.com/freddy-schuetz/hackathon-nrw-tourismus` ein."**
+> **„Richte mir `https://github.com/freddy-schuetz/nrw-tourismus-hackathon` ein."**
 
 Claude erledigt den Rest (klonen, konfigurieren) und fragt dich nur nach deinem n8n-Zugang. Danach kannst du direkt Workflows bauen lassen.
 
@@ -33,7 +33,7 @@ Claude erledigt den Rest (klonen, konfigurieren) und fragt dich nur nach deinem 
      - **macOS:** `brew install git node` (kein Homebrew vorhanden? → von [nodejs.org](https://nodejs.org) bzw. [git-scm.com](https://git-scm.com))
      - **Linux:** Paketmanager, z.B. `sudo apt install -y git nodejs npm`
    - ⚠️ Windows zeigt evtl. eine **UAC-Abfrage** (vom User bestätigen lassen). Nach der Installation ist das Programm oft erst in einem **neuen** Terminal im PATH — falls `node`/`git` direkt danach „not found": den User bitten, Claude Code **einmal neu zu starten**, dann hier weiter.
-2. **Klonen** und den Ordner als Projekt öffnen: `git clone https://github.com/freddy-schuetz/hackathon-nrw-tourismus`
+2. **Klonen** und den Ordner als Projekt öffnen: `git clone https://github.com/freddy-schuetz/nrw-tourismus-hackathon`
 3. **MCP-Konfig anlegen:** `cp .mcp.json.example .mcp.json`
 4. **n8n-Zugang erfragen** und in `.mcp.json` eintragen (`N8N_API_URL`, `N8N_API_KEY`):
    - Frage nach **n8n-Cloud-URL** + **API-Key**. Hat der User keinen: Anleitung „n8n-Trial holen" unten weitergeben.
@@ -59,8 +59,8 @@ Claude erledigt den Rest (klonen, konfigurieren) und fragt dich nur nach deinem 
 ## 🛠️ Manuelles Setup (statt der 1-Satz-Variante)
 
 ```bash
-git clone https://github.com/freddy-schuetz/hackathon-nrw-tourismus
-cd hackathon-nrw-tourismus
+git clone https://github.com/freddy-schuetz/nrw-tourismus-hackathon
+cd nrw-tourismus-hackathon
 cp .mcp.json.example .mcp.json        # dann N8N_API_URL + N8N_API_KEY eintragen
 ```
 Ordner in Claude Code öffnen → der n8n-MCP-Server (`npx n8n-mcp`) und alle Skills laden automatisch. Verbindung mit „prüfe die n8n-Verbindung" testen.
