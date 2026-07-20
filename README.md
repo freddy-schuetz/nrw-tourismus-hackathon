@@ -74,6 +74,7 @@ Skills sind Spickzettel, die Claude **von selbst** heranzieht, sobald sie zum Th
 
 **Am Anfang — deine Idee klären** (für den Hackathon):
 - `idee-klaeren` — macht aus einer vagen oder schwer beschreibbaren Idee einen klaren Bau-Plan (inkl. Tourismus-Ideen-Menü für „noch keine Idee").
+- `grill-me` — nur auf Zuruf („grill mich"): zerpflückt deinen **fertigen** Plan Frage für Frage, bevor du baust.
 
 **Workflows richtig bauen** (von [czlonkowski](https://github.com/czlonkowski/n8n-skills)):
 - `n8n-mcp-tools-expert` — wie man die n8n-Werkzeuge richtig bedient (Nodes suchen, Workflow anlegen, prüfen).
