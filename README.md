@@ -2,6 +2,9 @@
 
 Eine fertige Grundlage, um beim **NRW-Tourismus-Hackathon** ohne Vorerfahrung loszulegen — gemacht für **Touristiker:innen mit wenig/keiner Code-Erfahrung**. Du beschreibst deinen Alltag/deine Idee, **Claude baut** die Automatisierung in **n8n** (und bei Bedarf eine kleine Web-Oberfläche). Enthält vorkonfigurierte Skills, die n8n-Anbindung, Lern-Workflows und Frontend-/Backend-Beispiele.
 
+> 📄 **Zum ersten Mal hier? → [Schritt-für-Schritt-Anleitung als PDF](docs/Anleitung-ClaudeCode_n8n_Setup.pdf)**
+> Von der Installation über den n8n-Zugang bis zum ersten laufenden Workflow — in einfacher Sprache, ohne Vorkenntnisse. *(Auch als [druckfreundliche Version](docs/Anleitung-ClaudeCode_n8n_Setup-Druck.pdf).)*
+
 > 🧭 **Noch keine Idee — oder Idee da, aber schwer zu beschreiben?** Kein Problem: sag **„Hilf mir, meine Idee zu klären"** — Claude stellt dir ein paar einfache Fragen und macht daraus einen fertigen Bau-Plan. Ideen zum Stöbern: **[docs/tourismus-ideen.md](docs/tourismus-ideen.md)**.
 
 ---
