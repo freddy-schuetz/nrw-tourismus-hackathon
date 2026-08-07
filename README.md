@@ -2,7 +2,7 @@
 
 Eine fertige Grundlage, um beim **NRW-Tourismus-Hackathon** ohne Vorerfahrung loszulegen — gemacht für **Touristiker:innen mit wenig/keiner Code-Erfahrung**. Du beschreibst deinen Alltag/deine Idee, **Claude baut** die Automatisierung in **n8n** (und bei Bedarf eine kleine Web-Oberfläche). Enthält vorkonfigurierte Skills, die n8n-Anbindung, Lern-Workflows und Frontend-/Backend-Beispiele.
 
-> 📝 **Schon vor dem Hackathon: [Use-Case-Vorbereitung als PDF](docs/Use-Case-Vorbereitung.pdf)** — Leitfragen zum Finden deiner Idee, was du wissen & mitbringen solltest, plus ausfüllbarer Steckbrief. *(Auch als [Druckversion](docs/Use-Case-Vorbereitung-Druck.pdf).)*
+> 📝 **Schon vor dem Hackathon: [Use-Case-Vorbereitung als PDF](docs/Use-Case-Vorbereitung.pdf)** — ein paar Leitfragen (was nervt/kostet Zeit?) + womit du arbeitest (Tools & Programme), plus ein kurzer Steckbrief zum Mitbringen. Kein Technik-Wissen nötig. *(Auch als [Druckversion](docs/Use-Case-Vorbereitung-Druck.pdf).)*
 >
 > 📄 **Zum ersten Mal hier? → [Schritt-für-Schritt-Anleitung als PDF](docs/Anleitung-ClaudeCode_n8n_Setup.pdf)**
 > Von der Installation über den n8n-Zugang bis zum ersten laufenden Workflow — in einfacher Sprache, ohne Vorkenntnisse. *(Auch als [druckfreundliche Version](docs/Anleitung-ClaudeCode_n8n_Setup-Druck.pdf).)*
