@@ -9,7 +9,7 @@ Kurz: **meistens brauchst du keine externe DB.** Wähle nach *wo die Daten leben
 | **Login / Datei-Uploads / Vektoren / deploytes Frontend** | **Supabase** (buildbar, geteilt EU) | niedrig (Keys aus dem Gate) |
 | **Lokaler Prototyp / ein Backend-Prozess mit Volume** | **SQLite** | null (Datei) |
 
-> Die geteilten EU-Bausteine (NocoDB, Supabase) sind dieselben wie für die Web-Teilnehmenden. Zugangsdaten stehen im **Zugangsbereich auf `buildbar.at/nrw`** (Passwort nennt die Moderation).
+> Die geteilten EU-Bausteine (NocoDB, Supabase) sind dieselben wie für die Web-Teilnehmenden. Zugangsdaten stehen im **Zugangsbereich auf `buildbar.de/nrw`** (Passwort nennt die Moderation). *(Die buildbar-Adressen sind identisch auch unter `buildbar.at` erreichbar.)*
 
 ---
 
@@ -27,7 +27,7 @@ In n8n **eingebaut**, schon in deiner **Cloud-Trial** dabei. Keine Anmeldung, ke
 
 ## 2. NocoDB (buildbar, geteilt) — sichtbares Tabellen-Grid
 
-Für „Claude, speicher/lies das in einer Tabelle" mit **sichtbarer Oberfläche** (wie Airtable). Geteilte EU-Instanz unter **`nocodb.buildbar.at`**.
+Für „Claude, speicher/lies das in einer Tabelle" mit **sichtbarer Oberfläche** (wie Airtable). Geteilte EU-Instanz unter **`nocodb.buildbar.de`**.
 
 - **Self-service:** dort einen **Account + API-Token** anlegen. Claude bindet das Token als **NocoDB-Credential** in deine n8n ein (Node „NocoDB").
 - Ideal für: Anfragen/Anmeldungen sammeln, Event-Listen, alles was jemand **im Browser sehen/bearbeiten** soll.
@@ -37,7 +37,7 @@ Für „Claude, speicher/lies das in einer Tabelle" mit **sichtbarer Oberfläche
 
 Wenn ein **deploytes Frontend** und/oder **mehrere Dienste** eine gemeinsame Postgres-DB brauchen, oder du **Login/Auth**, **Datei-Uploads** bzw. **Vektor-Suche (pgvector, KI-Memory)** willst. Geteilte self-hosted EU-Instanz unter **`supabase.buildbar.at`**.
 
-- **Zugangsdaten** (Project-URL, `anon key`, `service_role`) stehen im **Zugangsbereich auf `buildbar.at/nrw`** (Passwort nennt die Moderation) — **keine eigene Anmeldung nötig**.
+- **Zugangsdaten** (Project-URL, `anon key`, `service_role`) stehen im **Zugangsbereich auf `buildbar.de/nrw`** (Passwort nennt die Moderation) — **keine eigene Anmeldung nötig**.
 - **n8n:** Node **„Supabase"** oder **„Postgres"**. **Next.js:** `@supabase/supabase-js` (Keys als Deploy-`env`, nie ins Repo). **FastAPI:** `psycopg` mit dem Connection-String (siehe auskommentiertes Beispiel in `../backend-example/app/main.py`).
 - Geteilte Instanz → **eigene Tabellen/Präfix**, keine echten personenbezogenen Daten. ⚠️ Keys **nie ins Repo**, nur als Deploy-`env` / n8n-Credential.
 - *(Fallback für Self-Hoster / nach dem Event: eigenes Projekt auf [supabase.com](https://supabase.com), Free-Tier ohne Kreditkarte, pausiert nach 1 Woche Inaktivität.)*

@@ -145,16 +145,16 @@ Sag einfach **„starte mein Frontend"**. Claude installiert alles und startet d
 > `localhost` heißt: läuft **lokal auf deinem Laptop** — perfekt zum Bauen, Testen und für eine Demo am eigenen Bildschirm. (Dein n8n-Backend ist ja schon in der Cloud, deshalb funktioniert die ganze App so bereits komplett.)
 
 ### 🌍 Willst du es online teilen? → öffentliche EU-URL
-Lokal läuft deine App **nur auf deinem Laptop**. Für eine **öffentliche Internet-URL** (z.B. zur Präsentation) veröffentlicht Claude dein Frontend auf der **buildbar-EU-Infrastruktur** — **ohne dass du einen Hosting-Account brauchst**. Ergebnis: eine echte Adresse wie `https://app-xxxx.buildbar.at`.
+Lokal läuft deine App **nur auf deinem Laptop**. Für eine **öffentliche Internet-URL** (z.B. zur Präsentation) veröffentlicht Claude dein Frontend auf der **buildbar-EU-Infrastruktur** — **ohne dass du einen Hosting-Account brauchst**. Ergebnis: eine echte Adresse wie `https://app-xxxx.buildbar.de`. *(Die buildbar-Adressen funktionieren identisch auch unter `buildbar.at`; für dieses Event nutzen wir durchgehend `.de`.)*
 
 **Einmalig nötig (kann Claude nicht für dich tun):** ein kostenloses **[GitHub](https://github.com)-Konto** und ein Login (`gh auth login`, öffnet den Browser). **Kein Vercel, kein weiterer Account.**
 
 **Den Rest macht Claude** — sag einfach **„stell mein Frontend online"**:
 - legt ein **privates** GitHub-Repo mit deinem Frontend an,
-- veröffentlicht es über den buildbar-Deploy-Dienst (`deploy.buildbar.at`) auf die EU-Infra,
+- veröffentlicht es über den buildbar-Deploy-Dienst (`deploy.buildbar.de`) auf die EU-Infra,
 - gibt dir die fertige **öffentliche URL** (erster Build dauert ein paar Minuten).
 
-Claude braucht dafür einmal das **Event-Passwort** (aus dem Zugangsbereich auf `buildbar.at/nrw`, nennt die Moderation). Dein **n8n-Backend bleibt unverändert**. **Keine Keys ins Repo** — die trägt Claude nur als Deploy-Einstellungen ein.
+Claude braucht dafür einmal das **Event-Passwort** (aus dem Zugangsbereich auf `buildbar.de/nrw`, nennt die Moderation). Dein **n8n-Backend bleibt unverändert**. **Keine Keys ins Repo** — die trägt Claude nur als Deploy-Einstellungen ein.
 
 ### 💾 (Optional) Projekt sichern/teilen → GitHub
 Willst du deinen Code **sichern**, im **Team teilen** oder behalten — sag **„lade mein Projekt auf GitHub"**. Claude legt ein Repository an und lädt es hoch.
@@ -173,8 +173,8 @@ Willst du deinen Code **sichern**, im **Team teilen** oder behalten — sag **�
 
 Meistens nicht extern. Faustregel:
 - **Daten im n8n-Workflow** → **n8n Data Tables** (eingebaut, null Setup).
-- **Sichtbares Tabellen-Grid** → **NocoDB** (`nocodb.buildbar.at`, geteilte EU-Instanz, self-service Account+Token).
-- **Deployte App / Login / Datei-Uploads / Vektoren** → **Supabase** (`supabase.buildbar.at`, geteilte EU-Instanz; URL+Keys aus dem Zugangsbereich auf `buildbar.at/nrw`).
+- **Sichtbares Tabellen-Grid** → **NocoDB** (`nocodb.buildbar.de`, geteilte EU-Instanz, self-service Account+Token).
+- **Deployte App / Login / Datei-Uploads / Vektoren** → **Supabase** (`supabase.buildbar.at`, geteilte EU-Instanz; URL+Keys aus dem Zugangsbereich auf `buildbar.de/nrw`).
 
 Details + How-to: **[`docs/datenbank.md`](docs/datenbank.md)**.
 
