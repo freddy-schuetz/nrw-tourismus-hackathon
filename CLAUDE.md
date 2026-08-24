@@ -12,6 +12,13 @@ Eine fertige Grundlage, um mit **Claude Code + n8n-mcp** Automatisierungs-Workfl
 - **Nach jedem Workflow AUTOMATISCH (ohne Nachfrage):** validieren → mit **Testdaten testen** (Skill `n8n-testdaten`) → mit **Sticky Notes dokumentieren** (Skill `n8n-dokumentation`) → **Security-Check** (Skill `n8n-security-audit`). Ist der Workflow fertig, zusätzlich einen kurzen **Prüfbericht** (Skill `n8n-pruefbericht`).
 - **Silent Execution:** Werkzeuge ohne Zwischenkommentar ausführen, danach **kurz und verständlich** berichten, was gebaut/getestet/dokumentiert wurde.
 - **Frontend/App zeigen = DU startest sie (nicht der User):** Will der User seine App ansehen/testen, übernimm das **selbst** — falls nötig `npm install`, dann `npm run dev` **im Hintergrund** starten (blockiert nicht), und ihm die **`http://localhost:3000`**-URL geben bzw. die Vorschau/den Browser öffnen. Den User **keine Befehle tippen lassen**. Läuft der Server schon, einfach die URL nennen.
+- **Event-Infos (Agenda, Ort, Abendessen):** Fragt der Teilnehmer nach Agenda, Zeiten, Ort oder dem Abendessen → lies **https://buildbar.at/nrw/claude.md** per WebFetch (reines Markdown, immer aktuell, keine Geheimnisse) und antworte daraus.
+- **App ÖFFENTLICH veröffentlichen (EU-URL, ohne eigenen Account):** Will der Teilnehmer eine öffentliche Demo-URL, gehst **DU** so vor (er tippt keine Befehle). Localhost bleibt für die Vorschau; für die öffentliche URL:
+  1. `gh repo create <user>/buildbar-frontend-<slug> --private --source=<Frontend-Ordner, z. B. frontend-starter> --push` (eigenes GitHub; einmalig `gh auth login` = Browser-Login, **kein neuer Account**).
+  2. `curl -s -X POST https://deploy.buildbar.at/prepare -d repo=<owner/name> -d password=<EVENT-PASSWORT>` → liefert `deployId` + `public_key`.
+  3. `gh api repos/<owner>/<name>/keys -f title=buildbar-deploy -f key='<public_key>' -F read_only=true` (Public Key als read-only Deploy-Key ans private Repo).
+  4. `curl -s -X POST https://deploy.buildbar.at/publish -d deployId=<…> -d base_dir=/frontend-starter -d password=<EVENT-PASSWORT> --data-urlencode env=$'NEXT_PUBLIC_N8N_BASE=…\nNEXT_PUBLIC_SUPABASE_URL=…'` → liefert die URL `https://app-xxxx.buildbar.at`. **Erster Build dauert einige Minuten.**
+  - ⚠️ **NIE Secrets committen** — nur `NEXT_PUBLIC_*` im Code, alle Keys (Supabase-Anon, n8n-Webhook usw.) **nur** als `env` beim `/publish`. Kein Vercel, kein Fremd-Account. Das Event-Passwort nennt die Moderation (auch im Zugangsbereich auf `buildbar.at/nrw`).
 
 ## Workflow-Erstellung: Standard-Prozess
 Diesen Ablauf führst du **automatisch** durch (Schritte 6–9 + 11 ohne Extra-Aufforderung):
@@ -95,8 +102,12 @@ Für LangChain/AI-Nodes `sourceOutput` nutzen: `ai_languageModel`, `ai_tool`, `a
 3. Keine personenbezogenen Daten in Node-Namen/Notes
 4. Workflow-Änderungen werden automatisch nach `backup/` gesichert (Hook)
 
-## Datenbank?
-Meistens keine externe nötig. **n8n-Workflow** → **n8n Data Tables** (eingebaut, `n8n_manage_datatable`, 50 MB, in der Cloud-Trial). **Deployte App / Auth / Vektoren** → **Supabase Free**. **Nur lokal** → SQLite (nie auf Vercel-Serverless). Details: `docs/datenbank.md`.
+## Datenbank & EU-Bausteine
+Meistens keine externe nötig. **n8n-Workflow** → **n8n Data Tables** (eingebaut, `n8n_manage_datatable`). Braucht es mehr, stehen die geteilten **EU-Bausteine** bereit — dieselben wie für die Web-Teilnehmenden, Zugangsdaten aus dem Zugangsbereich auf **`buildbar.at/nrw`** (Passwort nennt die Moderation):
+- **NocoDB** (`nocodb.buildbar.at`): sichtbares Tabellen-Grid (wie Airtable). Self-service: eigenen Account + API-Token anlegen, als Credential in der n8n einbinden.
+- **Supabase** (`supabase.buildbar.at`): Postgres mit **Login, Datei-Uploads, Vektoren/RAG**. URL + Keys aus dem Gate.
+
+Details: `docs/datenbank.md`.
 
 ## Geladene Skills
 **Am Anfang:** `idee-klaeren` — Idee/Prozess mit dem Teilnehmer klären → klarer Bau-Auftrag (Steckbrief); Ideen-Menü in `docs/tourismus-ideen.md` · `grill-me` — Härtetest für einen **fertigen** Plan, **nur auf ausdrücklichen Wunsch** („grill mich").

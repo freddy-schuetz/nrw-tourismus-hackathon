@@ -144,26 +144,24 @@ Sag einfach **„starte mein Frontend"**. Claude installiert alles und startet d
 
 > `localhost` heißt: läuft **lokal auf deinem Laptop** — perfekt zum Bauen, Testen und für eine Demo am eigenen Bildschirm. (Dein n8n-Backend ist ja schon in der Cloud, deshalb funktioniert die ganze App so bereits komplett.)
 
-### 🌍 Willst du es online teilen? → „Vercel"
-Lokal läuft deine App **nur auf deinem Laptop**. Für eine **öffentliche Internet-URL** (z.B. zur Präsentation) bringst du das Frontend zu **[Vercel](https://vercel.com)** — einem **kostenlosen Hosting-Dienst für Web-Apps**, der dein Frontend zu einer echten Adresse macht (z.B. `https://mein-projekt.vercel.app`).
+### 🌍 Willst du es online teilen? → öffentliche EU-URL
+Lokal läuft deine App **nur auf deinem Laptop**. Für eine **öffentliche Internet-URL** (z.B. zur Präsentation) veröffentlicht Claude dein Frontend auf der **buildbar-EU-Infrastruktur** — **ohne dass du einen Hosting-Account brauchst**. Ergebnis: eine echte Adresse wie `https://app-xxxx.buildbar.at`.
 
-**Das machst du selbst (einmalig, ~2 Min — kann Claude nicht für dich tun):**
-1. Auf **[vercel.com](https://vercel.com)** ein **kostenloses Konto** anlegen („Sign Up" — am einfachsten „Continue with GitHub", sonst E-Mail).
-2. Wenn Claude gleich `vercel login` ausführt: im Browser, der aufgeht, kurz **bestätigen**.
+**Einmalig nötig (kann Claude nicht für dich tun):** ein kostenloses **[GitHub](https://github.com)-Konto** und ein Login (`gh auth login`, öffnet den Browser). **Kein Vercel, kein weiterer Account.**
 
 **Den Rest macht Claude** — sag einfach **„stell mein Frontend online"**:
-- deployt die App (`npx vercel --prod`),
-- trägt deine **n8n-URL** als Einstellung (`NEXT_PUBLIC_N8N_BASE`) bei Vercel ein, damit die Online-App dein n8n erreicht,
-- gibt dir die fertige **öffentliche URL**.
+- legt ein **privates** GitHub-Repo mit deinem Frontend an,
+- veröffentlicht es über den buildbar-Deploy-Dienst (`deploy.buildbar.at`) auf die EU-Infra,
+- gibt dir die fertige **öffentliche URL** (erster Build dauert ein paar Minuten).
 
-Dein **n8n-Backend bleibt unverändert** (ist schon in der Cloud) — nur das Frontend wird gehostet.
+Claude braucht dafür einmal das **Event-Passwort** (aus dem Zugangsbereich auf `buildbar.at/nrw`, nennt die Moderation). Dein **n8n-Backend bleibt unverändert**. **Keine Keys ins Repo** — die trägt Claude nur als Deploy-Einstellungen ein.
 
 ### 💾 (Optional) Projekt sichern/teilen → GitHub
 Willst du deinen Code **sichern**, im **Team teilen** oder behalten — sag **„lade mein Projekt auf GitHub"**. Claude legt ein Repository an und lädt es hoch.
 
 **Einmalig nötig (kann Claude nicht für dich tun):** ein **kostenloses [GitHub](https://github.com)-Konto** und ein **Login** (`gh auth login`, öffnet den Browser). Danach erledigt Claude den Rest (`git` + `gh repo create`).
 
-> Für den **Vercel-Deploy brauchst du GitHub nicht** (der läuft über die Vercel-CLI). GitHub ist nur fürs Sichern/Teilen — komplett optional.
+> Für die **öffentliche URL brauchst du ein GitHub-Konto** (Claude legt dort das private Repo an). Reines lokales Vorführen (localhost, Screenshare) geht auch ohne.
 
 ### Die Seeds zum Draufaufbauen
 - **`frontend-starter/`** — minimales Beispiel: Formular → n8n-Webhook + optionaler KI-Chat.
@@ -174,9 +172,9 @@ Willst du deinen Code **sichern**, im **Team teilen** oder behalten — sag **�
 ## 🗄️ Brauche ich eine Datenbank?
 
 Meistens nicht extern. Faustregel:
-- **Daten im n8n-Workflow** → **n8n Data Tables** (eingebaut, null Setup, in der Trial dabei).
-- **Deployte App / Login / Vektoren** → **Supabase Free** (keine Kreditkarte nötig).
-- **Nur lokal** → **SQLite** (nicht auf Vercel-Serverless!).
+- **Daten im n8n-Workflow** → **n8n Data Tables** (eingebaut, null Setup).
+- **Sichtbares Tabellen-Grid** → **NocoDB** (`nocodb.buildbar.at`, geteilte EU-Instanz, self-service Account+Token).
+- **Deployte App / Login / Datei-Uploads / Vektoren** → **Supabase** (`supabase.buildbar.at`, geteilte EU-Instanz; URL+Keys aus dem Zugangsbereich auf `buildbar.at/nrw`).
 
 Details + How-to: **[`docs/datenbank.md`](docs/datenbank.md)**.
 
