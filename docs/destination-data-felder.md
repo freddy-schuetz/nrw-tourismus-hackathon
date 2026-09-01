@@ -902,3 +902,65 @@ Scratchpad zeigt ihn genau so, wie er rausgehen würde.
 Dass die Redaktion 30-mal auftaucht, liegt an `oz_zustaendige`: dort stehen nur die 34
 Priorität-1-Fälle. Für alle anderen fällt keine zuständige Person an, und die Anfrage geht an die
 Region — genau die vorgesehene Rückfallregel.
+
+---
+
+## Frontend veröffentlicht (01.09.2026)
+
+```
+https://app-0755d440.buildbar.de
+```
+
+Deployt aus `TobiasValentien/oeffnungszeiten-abgleich` (Branch `main`) über
+`deploy.buildbar.de`. Über HTTPS mit echtem Token geprüft: Betrieb wird geladen, beide Fassungen
+stehen zur Auswahl, freie Eingabe da, Gäste-Link da, **kein** Bearbeitungslink.
+
+`FRAGEBOGEN_BASIS` in `OZ-1` zeigt jetzt auf diese Adresse — die Fragebogen-Links in den
+Anfrage-Mails funktionieren damit für jeden.
+
+### Zwei Stolpersteine, die Zeit gekostet haben
+
+**1. `base_dir` ohne führenden Schrägstrich.** Die Projektanleitung nennt
+`base_dir=/frontend-starter`; der Dienst lehnt das ab:
+
+```
+"errors": { "base_directory": ["The base directory field format is invalid."] }
+```
+
+Funktioniert hat `base_dir=frontend-starter`.
+
+**2. `NEXT_PUBLIC_*` muss zur BUILD-Zeit da sein.** Die `env`-Angabe beim `/publish` setzt
+Laufzeit-Variablen — Next.js setzt `NEXT_PUBLIC_*` aber beim Bauen in die JavaScript-Dateien ein.
+Die veröffentlichte Seite meldete deshalb „NEXT_PUBLIC_N8N_BASE ist nicht gesetzt", zweimal
+hintereinander, auch nach erneutem Publish mit `env`.
+
+Gelöst über eine **`.env.production` im Repo**. Kein Geheimnis: die beiden Webhooks sind ohnehin
+öffentlich erreichbar und schützen sich über die Einmal-Tokens. Echte Geheimnisse gehören
+weiterhin in `.env.local` (gitignored) oder in n8n-Credentials.
+
+*(Dass die eigene Fehlermeldung im Frontend den Variablennamen nennt, hat hier viel Sucherei
+gespart — sie stand sofort im Klartext auf der Seite.)*
+
+### Chat-Demo entfernt
+
+`app/api/chat`, `app/chat` und `lib/ai` stammten aus dem Starterkit und hätten ohne
+`ANTHROPIC_API_KEY` einen Fehler geliefert. Entfernt samt der drei nur dafür genutzten
+Abhängigkeiten. Die App besteht jetzt aus **vier rein statischen Routen** und braucht zur Laufzeit
+keinen Serverendpunkt.
+
+### 🔴 Offen und aus dem Blick geraten: Quelle C
+
+Die Betriebs-Webseiten sind **nicht** im Ablauf. `webseite.js` ist gebaut und an 80 echten Seiten
+gemessen, der KI-Prompt ist an 8 Seiten geprüft — aber in `OZ-1` ist nichts davon eingebaut.
+`variante_c` ist in allen 40 Fällen leer, der Fragebogen zeigt zwei statt drei Fassungen.
+
+Die Folge wiegt schwerer als der Prozentsatz vermuten lässt: die **459 Datensätze mit Struktur
+aber ohne eigenen Freitext** sind mit dem heutigen Stand überhaupt nicht prüfbar. Für die ist die
+Webseite die einzige zweite Quelle.
+
+Zum Einbau nötig:
+
+1. HTTP-Request auf `web` je Fall, fehlertolerant (6 % der Seiten sind tot)
+2. `ausJsonLd()` für die 8 % exakten Fälle — sofort machbar, ohne KI
+3. KI-Node mit dem getesteten Prompt für die 61 % Textfälle — braucht ein KI-Credential
+4. `variante_c` füllen und die Selektion um „widerspricht der Webseite" erweitern

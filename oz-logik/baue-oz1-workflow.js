@@ -256,7 +256,7 @@ const workflow = {
 
 // --- Mail-Strecke -------------------------------------------------------------
 // ⚠️ Vor dem ersten echten Versand ZWINGEND anzupassen:
-const FRAGEBOGEN_BASIS = 'https://BITTE-HIER-DIE-VEROEFFENTLICHTE-ADRESSE-EINTRAGEN';
+const FRAGEBOGEN_BASIS = 'https://app-0755d440.buildbar.de';
 const ABSENDER = 'Teutoburger Wald Tourismus <noreply@BITTE-EINTRAGEN>';
 const RUECKFALL_REDAKTION = 'redaktion@teutoburgerwald.de';
 
