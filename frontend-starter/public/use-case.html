@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Ein Ablauf, der falsche Öffnungszeiten selbst findet, genau eine Frage stellt — und die Antwort zurück in die Datenbank bringt.">
+<meta name="description" content="Der Ablauf findet falsche Zeiten selbst, stellt eine Frage und schreibt die Antwort zurück.">
 <meta name="robots" content="noindex">
 <meta property="og:title" content="Öffnungszeiten, die stimmen">
-<meta property="og:description" content="Ein Ablauf, der falsche Öffnungszeiten selbst findet, genau eine Frage stellt — und die Antwort zurück in die Datenbank bringt.">
+<meta property="og:description" content="Der Ablauf findet falsche Zeiten selbst, stellt eine Frage und schreibt die Antwort zurück.">
 <meta property="og:type" content="article">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%90%3C/text%3E%3C/svg%3E">
 <style>
@@ -17,22 +17,20 @@
   img, svg { max-width: 100%; height: auto; }
 </style>
 <title>Öffnungszeiten, die stimmen</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@500&display=swap">
 
 <style>
   /* ---------- Token-System -------------------------------------------------
-     Farbwelt: Buchenwald-Schatten als Grund, Moos als Struktur, Ziegelrot
-     als einziges Signal. Das Rot ist ausschliesslich fuer "falsche Angabe"
-     reserviert - deshalb faellt es auf.                                      */
+     Buchenwald-Schatten als Grund, Moos als Struktur, Ziegelrot als einziges
+     Signal. Das Rot steht ausschliesslich fuer "falsche Angabe" - deshalb
+     faellt es auf.                                                           */
   :root {
     --grund:      #f4f6f3;
     --flaeche:    #ffffff;
-    --flaeche-2:  #eaeee9;
-    --tinte:      #141d19;
-    --tinte-leise:#5c6b64;
-    --linie:      #d3dbd5;
+    --tinte:      #121a17;
+    --tinte-leise:#5a6a63;
+    --linie:      #d1dad4;
     --moos:       #2c5a4b;
-    --moos-hell:  #3f7b67;
     --signal:     #a92f18;
     --signal-bg:  #fbeae6;
     --gold:       #8a6a12;
@@ -40,14 +38,12 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --grund:      #0e1512;
+      --grund:      #0d1411;
       --flaeche:    #16201c;
-      --flaeche-2:  #1d2823;
-      --tinte:      #e7ede9;
-      --tinte-leise:#94a49c;
-      --linie:      #2b3831;
+      --tinte:      #e8eeea;
+      --tinte-leise:#93a39b;
+      --linie:      #2a3730;
       --moos:       #7bb8a2;
-      --moos-hell:  #9ed3bd;
       --signal:     #f0836a;
       --signal-bg:  #2e1712;
       --gold:       #dcbb62;
@@ -55,14 +51,12 @@
     }
   }
   :root[data-theme="dark"] {
-    --grund:      #0e1512;
+    --grund:      #0d1411;
     --flaeche:    #16201c;
-    --flaeche-2:  #1d2823;
-    --tinte:      #e7ede9;
-    --tinte-leise:#94a49c;
-    --linie:      #2b3831;
+    --tinte:      #e8eeea;
+    --tinte-leise:#93a39b;
+    --linie:      #2a3730;
     --moos:       #7bb8a2;
-    --moos-hell:  #9ed3bd;
     --signal:     #f0836a;
     --signal-bg:  #2e1712;
     --gold:       #dcbb62;
@@ -76,290 +70,205 @@
     background: var(--grund);
     color: var(--tinte);
     font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
-    font-size: 1.0625rem;
-    line-height: 1.62;
+    font-size: 1.125rem;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
   }
 
   .blatt {
-    max-width: 74rem;
+    max-width: 66rem;
     margin: 0 auto;
-    padding: clamp(1.75rem, 4vw, 4.5rem) clamp(1.1rem, 4vw, 3rem) 5rem;
+    padding: clamp(2rem, 5vw, 5rem) clamp(1.25rem, 5vw, 3.5rem) 6rem;
     display: flex;
     flex-direction: column;
-    gap: clamp(2.75rem, 5vw, 4.5rem);
+    gap: clamp(3.5rem, 7vw, 6rem);
   }
 
-  /* ---------- Typografie ---------- */
-  h1, h2, h3, .marke, .zahl, .kachel-wert {
+  /* ---------- Typografie: gross, wenig, klar ---------- */
+  h1, h2, .marke, .leitsatz, .wert, .schritt-nr {
     font-family: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
   }
   h1 {
-    font-size: clamp(2.4rem, 6.2vw, 4.4rem);
+    font-size: clamp(2.75rem, 8vw, 5.5rem);
     font-weight: 800;
-    line-height: 1.02;
-    letter-spacing: -0.025em;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
     margin: 0;
     text-wrap: balance;
   }
   h2 {
-    font-size: clamp(1.4rem, 2.8vw, 2rem);
-    font-weight: 700;
-    line-height: 1.14;
-    letter-spacing: -0.015em;
-    margin: 0 0 0.85rem;
-    text-wrap: balance;
+    font-size: clamp(1.25rem, 2.2vw, 1.55rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    margin: 0;
+    color: var(--moos);
   }
-  h3 {
-    font-size: 1.0625rem;
-    font-weight: 700;
-    letter-spacing: -0.005em;
-    margin: 0 0 0.35rem;
-  }
-  p { margin: 0 0 1rem; max-width: 66ch; }
-  p:last-child { margin-bottom: 0; }
-  strong { font-weight: 600; }
+  p { margin: 0; max-width: 58ch; }
 
   .marke {
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.18em;
     color: var(--moos);
   }
   .anriss {
-    font-size: clamp(1.1rem, 2vw, 1.35rem);
-    line-height: 1.45;
+    font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+    line-height: 1.35;
     color: var(--tinte-leise);
-    max-width: 52ch;
-  }
-  .fluss { max-width: 66ch; }
-
-  /* ---------- Kopf ---------- */
-  header { display: flex; flex-direction: column; gap: 1.1rem; }
-  .kopf-meta {
-    display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem;
-    align-items: baseline; justify-content: space-between;
-  }
-  .kopf-meta .rechts {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    color: var(--tinte-leise);
-  }
-  .regel { height: 3px; background: var(--moos); border: 0; margin: 0; }
-
-  /* ---------- Abschnitt ---------- */
-  section { display: flex; flex-direction: column; gap: 1.25rem; }
-  .kapitel-linie {
-    border: 0; border-top: 1px solid var(--linie); margin: 0;
+    max-width: 34ch;
   }
 
-  /* ---------- Der Satz, der haengen bleibt ---------- */
-  .knall {
-    background: var(--signal-bg);
-    border-left: 5px solid var(--signal);
-    padding: 1.35rem 1.5rem;
-    display: flex; flex-direction: column; gap: 0.5rem;
-  }
-  .knall .satz {
-    font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-weight: 700;
-    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
-    line-height: 1.2;
-    letter-spacing: -0.015em;
-    color: var(--signal);
+  /* Der grosse Satz. Dreimal auf der Seite, als Anker fuer den Blick. */
+  .leitsatz {
+    font-size: clamp(1.6rem, 4.2vw, 2.9rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0;
+    max-width: 26ch;
     text-wrap: balance;
   }
-  .knall p { color: var(--tinte); margin: 0; }
+  .leitsatz.rot { color: var(--signal); }
+  .leitsatz.gruen { color: var(--moos); }
 
-  /* ---------- Fassungs-Vergleich (das Herz der Seite) ---------- */
-  .vergleich-rahmen { overflow-x: auto; padding-bottom: 0.35rem; }
+  section { display: flex; flex-direction: column; gap: 1.5rem; }
+  .regel { height: 4px; background: var(--moos); border: 0; margin: 0; width: 4.5rem; }
+
+  header { display: flex; flex-direction: column; gap: 1.4rem; }
+  .kopf-oben {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem;
+    align-items: baseline; justify-content: space-between;
+  }
+  .kopf-oben .rechts {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.7rem; letter-spacing: 0.04em; color: var(--tinte-leise);
+  }
+
+  /* ---------- Fassungs-Vergleich: das Herz der Seite ---------- */
+  .vergleich-rahmen { overflow-x: auto; padding-bottom: 0.5rem; }
   .vergleich {
     display: grid;
-    grid-template-columns: repeat(3, minmax(15.5rem, 1fr));
-    gap: 0.9rem;
-    min-width: 48rem;
+    grid-template-columns: repeat(3, minmax(14rem, 1fr));
+    gap: 1rem;
+    min-width: 44rem;
   }
   .fassung {
     background: var(--flaeche);
     border: 1px solid var(--linie);
-    border-top: 3px solid var(--linie);
-    padding: 1rem 1.05rem 1.1rem;
-    display: flex; flex-direction: column; gap: 0.75rem;
+    border-top: 4px solid var(--linie);
+    padding: 1.1rem 1.15rem 1.2rem;
+    display: flex; flex-direction: column; gap: 0.85rem;
   }
   .fassung.q-a { border-top-color: var(--tinte-leise); }
   .fassung.q-b { border-top-color: var(--gold); }
   .fassung.q-c { border-top-color: var(--moos); }
-  .fassung-kopf { display: flex; flex-direction: column; gap: 0.15rem; }
-  .fassung-kopf .quelle {
+  .fassung .quelle {
     font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em;
-  }
-  .fassung-kopf .woher {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.66rem; letter-spacing: 0.03em;
-    color: var(--tinte-leise); text-transform: uppercase;
+    font-weight: 800; font-size: 1rem; letter-spacing: -0.01em;
   }
   .woche {
-    display: grid;
-    grid-template-columns: 2.6rem 1fr;
-    gap: 0.28rem 0.7rem;
+    display: grid; grid-template-columns: 2.4rem 1fr;
+    gap: 0.3rem 0.7rem;
     font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.775rem;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.4;
+    font-size: 0.78rem; font-variant-numeric: tabular-nums; line-height: 1.35;
+    margin: 0;
   }
   .woche dt { color: var(--tinte-leise); }
   .woche dd { margin: 0; }
-  .woche dd.zu { color: var(--tinte-leise); font-style: normal; }
+  .woche dd.zu { color: var(--tinte-leise); }
   .woche dd mark {
-    background: var(--signal-bg);
-    color: var(--signal);
-    font-weight: 600;
-    padding: 0 0.18em;
-    border-radius: 2px;
-  }
-  .fassung-fuss {
-    font-family: "Source Serif 4", Georgia, serif;
-    font-size: 0.86rem; line-height: 1.45;
-    color: var(--tinte-leise);
-    border-top: 1px solid var(--linie);
-    padding-top: 0.6rem;
+    background: var(--signal-bg); color: var(--signal);
+    font-weight: 500; padding: 0 0.2em; border-radius: 2px;
   }
 
-  /* ---------- Ablauf: eine echte Reihenfolge, darum numeriert ---------- */
-  .ablauf {
+  /* ---------- Vier Schritte ----------
+     Bewusst NICHT auto-fit: das ergibt bei mittlerer Breite 3 + 1 und lässt
+     neben dem vierten Schritt eine leere Fläche stehen. 1 / 2 / 4 Spalten
+     gehen immer auf.                                                        */
+  .schritte {
     list-style: none; margin: 0; padding: 0;
-    display: grid; gap: 0.9rem;
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-    counter-reset: schritt;
+    display: grid; gap: 1rem;
+    grid-template-columns: 1fr;
   }
-  .ablauf li {
-    background: var(--flaeche);
-    border: 1px solid var(--linie);
-    padding: 0.95rem 1rem 1.05rem;
-    display: flex; flex-direction: column; gap: 0.3rem;
-    counter-increment: schritt;
+  @media (min-width: 34rem) { .schritte { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 62rem) { .schritte { grid-template-columns: repeat(4, 1fr); } }
+  .schritte li {
+    display: flex; flex-direction: column; gap: 0.45rem;
+    padding-top: 0.9rem; border-top: 2px solid var(--moos);
   }
-  .ablauf li::before {
-    content: counter(schritt);
-    font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-weight: 800; font-size: 0.95rem;
-    color: var(--moos);
-    font-variant-numeric: tabular-nums;
+  .schritt-nr {
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--moos);
   }
-  .ablauf p { font-size: 0.9rem; line-height: 1.5; color: var(--tinte-leise); margin: 0; max-width: none; }
+  .schritte p { font-size: 0.98rem; line-height: 1.45; max-width: none; }
 
-  /* ---------- Quellen-Tabelle ---------- */
-  .tabelle-rahmen { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 34rem; }
-  caption { text-align: left; font-size: 0.86rem; color: var(--tinte-leise); padding-bottom: 0.55rem; }
-  th, td { text-align: left; padding: 0.6rem 0.8rem 0.6rem 0; border-bottom: 1px solid var(--linie); vertical-align: top; }
-  thead th {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em;
-    color: var(--tinte-leise); font-weight: 400;
-    border-bottom-color: var(--tinte-leise);
-  }
-  tbody th {
-    font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-weight: 700; width: 2.2rem; color: var(--moos);
-  }
-  td.klein { font-size: 0.9rem; color: var(--tinte-leise); }
-  .kein-d td, .kein-d th { color: var(--tinte-leise); }
-
-  /* ---------- Zahlen ---------- */
+  /* ---------- Zahlen: gross und nackt ---------- */
   .zahlen {
-    display: grid; gap: 1px;
-    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-    background: var(--linie);
-    border: 1px solid var(--linie);
+    display: grid; gap: 2rem 1.5rem;
+    grid-template-columns: repeat(2, 1fr);
   }
-  .kachel {
-    background: var(--flaeche); padding: 0.95rem 1rem 1rem;
-    display: flex; flex-direction: column; gap: 0.15rem;
-  }
-  .kachel-wert {
-    font-size: clamp(1.6rem, 3.4vw, 2.2rem); font-weight: 800;
-    letter-spacing: -0.03em; line-height: 1;
+  @media (min-width: 62rem) { .zahlen { grid-template-columns: repeat(4, 1fr); } }
+  .zahl { display: flex; flex-direction: column; gap: 0.3rem; }
+  .wert {
+    font-size: clamp(2.6rem, 6vw, 4rem);
+    font-weight: 800; line-height: 0.92; letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
   }
-  .kachel-wert.gut { color: var(--moos); }
-  .kachel-wert.warn { color: var(--signal); }
-  .kachel-text { font-size: 0.83rem; line-height: 1.4; color: var(--tinte-leise); }
-
-  /* ---------- Bremsen ---------- */
-  .bremsen { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
-  .bremsen li {
-    display: grid; grid-template-columns: 1.4rem 1fr; gap: 0.7rem;
-    align-items: start;
-    font-size: 0.95rem; line-height: 1.5;
-  }
-  .bremsen li::before {
-    content: "×"; color: var(--signal);
-    font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-weight: 700; font-size: 1.15rem; line-height: 1.25;
-    text-align: center;
+  .wert.gruen { color: var(--moos); }
+  .wert.rot { color: var(--signal); }
+  .zahl span:last-child {
+    font-size: 0.95rem; line-height: 1.35; color: var(--tinte-leise); max-width: 20ch;
   }
 
-  /* ---------- Muster ---------- */
-  .muster { display: grid; gap: 0.9rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
-  .muster > div {
+  /* ---------- Zwei Karten ---------- */
+  .karten { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); }
+  .karte {
     background: var(--gold-bg); border: 1px solid var(--linie);
-    padding: 1rem 1.05rem 1.1rem;
-  }
-  .muster h3 { color: var(--gold); }
-  .muster p { font-size: 0.92rem; line-height: 1.5; margin: 0; }
-  .muster code {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.84em; font-variant-numeric: tabular-nums;
-  }
-
-  /* ---------- Stand / Riegel ---------- */
-  .riegel { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
-  .riegel li {
-    display: grid; grid-template-columns: 5.7rem 1fr; gap: 0.9rem;
-    align-items: baseline; font-size: 0.95rem; line-height: 1.5;
-    padding-bottom: 0.6rem; border-bottom: 1px solid var(--linie);
-  }
-  .riegel li:last-child { border-bottom: 0; padding-bottom: 0; }
-  .stand {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em;
-    padding: 0.22rem 0.45rem; text-align: center; white-space: nowrap;
-  }
-  .stand.laeuft { background: var(--moos); color: var(--grund); }
-  .stand.zu     { background: var(--signal-bg); color: var(--signal); border: 1px solid var(--signal); }
-  .stand.wartet { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold); }
-
-  /* ---------- Abschluss ---------- */
-  .schluss {
-    background: var(--flaeche-2);
-    border-left: 5px solid var(--moos);
-    padding: 1.4rem 1.55rem;
+    padding: 1.25rem 1.3rem 1.35rem;
     display: flex; flex-direction: column; gap: 0.6rem;
   }
-  .schluss .satz {
+  .karte .kopf {
     font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-weight: 700; font-size: clamp(1.15rem, 2.4vw, 1.5rem);
-    line-height: 1.22; letter-spacing: -0.015em; text-wrap: balance;
+    font-weight: 800; font-size: 1.12rem; line-height: 1.2;
+    letter-spacing: -0.015em; color: var(--gold);
   }
+  .karte p { font-size: 1rem; line-height: 1.45; }
+  .karte code {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.86em; font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Stand: drei Zeilen ---------- */
+  .stand-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .stand-liste li {
+    display: grid; grid-template-columns: 6rem 1fr; gap: 1.1rem;
+    align-items: baseline;
+  }
+  .stand-liste p { font-size: 1rem; line-height: 1.45; }
+  .plakette {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em;
+    padding: 0.3rem 0.5rem; text-align: center; white-space: nowrap;
+  }
+  .plakette.ja   { background: var(--moos); color: var(--grund); }
+  .plakette.nein { background: var(--signal-bg); color: var(--signal); border: 1px solid var(--signal); }
+  .plakette.spaeter { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold); }
+
   footer {
     font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.68rem; letter-spacing: 0.03em;
-    color: var(--tinte-leise);
-    border-top: 1px solid var(--linie);
-    padding-top: 1.1rem;
-    display: flex; flex-wrap: wrap; gap: 0.3rem 1.4rem;
+    font-size: 0.68rem; letter-spacing: 0.03em; color: var(--tinte-leise);
+    border-top: 1px solid var(--linie); padding-top: 1.2rem;
+    display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem;
   }
 
   a { color: var(--moos); text-underline-offset: 0.16em; }
-  a:focus-visible, li:focus-visible { outline: 2px solid var(--moos); outline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--moos); outline-offset: 3px; }
 
-  @media (max-width: 34rem) {
-    .riegel li { grid-template-columns: 1fr; gap: 0.3rem; }
-    .stand { justify-self: start; }
+  @media (max-width: 30rem) {
+    .stand-liste li { grid-template-columns: 1fr; gap: 0.4rem; }
+    .plakette { justify-self: start; }
   }
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -370,41 +279,29 @@
 <div class="blatt">
 
   <header>
-    <div class="kopf-meta">
+    <div class="kopf-oben">
       <span class="marke">Use Case · Teutoburger Wald Tourismus</span>
-      <span class="rechts">destination.data · Mandant teutoburgerwald · 1161 Gastro-Datensätze</span>
+      <span class="rechts">destination.data · 1161 Gastro-Datensätze</span>
     </div>
     <h1>Öffnungszeiten,<br>die stimmen</h1>
-    <p class="anriss">Ein Ablauf, der falsche Öffnungszeiten selbst findet, genau eine Frage stellt — und die Antwort zurück in die Datenbank bringt.</p>
+    <p class="anriss">Der Ablauf findet falsche Zeiten selbst, stellt eine Frage und schreibt die Antwort zurück.</p>
     <hr class="regel">
   </header>
 
   <section>
-    <h2>Das Problem ist nicht die Lücke. Es ist die falsche Auskunft.</h2>
-    <div class="fluss">
-      <p>Öffnungszeiten ändern sich ständig: Ruhetag, Urlaub, Saison. Gepflegt werden sie in destination.data von den <strong>lokalen kommunalen Touristiker:innen</strong> — nebenbei, neben allem anderen. Systematisch nachprüfen hieße: jeden Betrieb aufrufen, Webseite und Google vergleichen, nachtelefonieren. Das macht niemand für 1161 Datensätze.</p>
-    </div>
-    <div class="knall">
-      <span class="satz">Ist das Feld leer, zeigt der TeutoNavigator dem Gast „immer geöffnet".</span>
-      <p>Das ist keine fehlende Angabe, sondern eine <strong>aktiv falsche</strong>. 34 Datensätze im Bestand sind davon betroffen. Der Gast fährt hin und steht vor der verschlossenen Tür.</p>
-    </div>
+    <h2>Das Problem</h2>
+    <p class="leitsatz rot">Kein Eintrag heißt für den Gast: immer geöffnet.</p>
+    <p><strong>43</strong> Gastro-Datensätze haben keine Öffnungszeiten hinterlegt. Der TeutoNavigator zeigt sie als „immer geöffnet". Das ist keine Lücke — das ist eine falsche Auskunft. Der Gast fährt hin und steht vor der Tür.</p>
   </section>
 
-  <hr class="kapitel-linie">
-
   <section>
-    <h2>Wie eine solche Abweichung aussieht</h2>
-    <div class="fluss">
-      <p>Ein echter Fall aus dem Bestand: <strong>Benni´s Kitchen in Delbrück</strong>. Drei Quellen, drei Aussagen. Rot markiert ist, was voneinander abweicht.</p>
-    </div>
+    <h2>Ein echter Fall</h2>
+    <p><strong>Benni´s Kitchen, Delbrück.</strong> Drei Quellen, drei Antworten. Rot ist, was abweicht.</p>
     <div class="vergleich-rahmen">
       <div class="vergleich">
 
         <article class="fassung q-a">
-          <div class="fassung-kopf">
-            <span class="quelle">A · destination.data</span>
-            <span class="woher">Feld timeIntervals</span>
-          </div>
+          <span class="quelle">Die Datenbank</span>
           <dl class="woche">
             <dt>Mo</dt><dd><mark>09:30</mark>–14:00, 17:00–22:00</dd>
             <dt>Di</dt><dd class="zu">geschlossen</dd>
@@ -414,14 +311,10 @@
             <dt>Sa</dt><dd>17:00–<mark>22:00</mark></dd>
             <dt>So</dt><dd><mark>17:00–22:00</mark></dd>
           </dl>
-          <p class="fassung-fuss">Das ist die Fassung, die Gäste heute sehen — über Open Data, Widgets und Apps.</p>
         </article>
 
         <article class="fassung q-b">
-          <div class="fassung-kopf">
-            <span class="quelle">B · Beschreibungstext</span>
-            <span class="woher">im selben Datensatz</span>
-          </div>
+          <span class="quelle">Der Beschreibungstext</span>
           <dl class="woche">
             <dt>Mo</dt><dd>09:30–14:00, 17:00–22:00</dd>
             <dt>Di</dt><dd class="zu">geschlossen</dd>
@@ -431,14 +324,10 @@
             <dt>Sa</dt><dd><mark>ab 17:00</mark></dd>
             <dt>So</dt><dd><mark>ab 17:00</mark></dd>
           </dl>
-          <p class="fassung-fuss">Derselbe Datensatz widerspricht sich selbst: der Freitext kennt an drei Tagen keinen Abend.</p>
         </article>
 
         <article class="fassung q-c">
-          <div class="fassung-kopf">
-            <span class="quelle">C · Webseite des Betriebs</span>
-            <span class="woher">maschinenlesbar · schema.org</span>
-          </div>
+          <span class="quelle">Die eigene Webseite</span>
           <dl class="woche">
             <dt>Mo</dt><dd><mark>11:00</mark>–14:00, 17:00–22:00</dd>
             <dt>Di</dt><dd class="zu">geschlossen</dd>
@@ -448,144 +337,88 @@
             <dt>Sa</dt><dd>17:00–<mark>23:00</mark></dd>
             <dt>So</dt><dd><mark>16:00–21:30</mark></dd>
           </dl>
-          <p class="fassung-fuss">Der Betrieb sagt es auf seiner eigenen Seite selbst — nur hat es niemand abgeglichen.</p>
         </article>
 
       </div>
     </div>
-    <div class="fluss">
-      <p>Und die Erklärung steht im Datensatz daneben, im Feld Küchenzeiten: <strong>„Frühstück: 09:30–11:30"</strong>. Jemand hat die Frühstückszeit als Öffnungszeit eingetragen. Das findet kein Mensch durch Draufschauen — und der Wirt kreuzt es in zehn Sekunden an.</p>
-    </div>
+    <p>Die Auflösung steht im Datensatz daneben: <strong>„Frühstück: 09:30–11:30"</strong>. Jemand hat die Frühstückszeit als Öffnungszeit eingetragen. Kein Mensch findet das durch Draufschauen — der Wirt kreuzt es in zehn Sekunden an.</p>
   </section>
 
-  <hr class="kapitel-linie">
-
   <section>
-    <h2>Die Idee: nicht um Datenpflege bitten, sondern eine Frage stellen</h2>
-    <div class="fluss">
-      <p>„Pflegt mal eure Daten" erzeugt schlechtes Gewissen und keine Änderung. <strong>„Welche dieser drei Fassungen stimmt?"</strong> erzeugt einen Klick. Gefragt werden drei, die es wissen können: wer den Datensatz angelegt hat, wer ihn zuletzt bearbeitet hat, und der Gastronom selbst.</p>
-    </div>
-    <ol class="ablauf">
-      <li><h3>Finden</h3><p>Alle Gastro-Datensätze lesen und die Quellen <em>bedeutungsgleich</em> vergleichen. <code>Mo 11-14</code> und <code>Montag 11:00–14:00 Uhr</code> sind dieselbe Aussage.</p></li>
-      <li><h3>Fragen</h3><p>Eine Mail mit persönlichem Link. Auf der Seite stehen die Fassungen nebeneinander — ankreuzen oder eigene Zeiten eintragen. Wo die Küchenzeit fehlt, eine zweite Frage dazu.</p></li>
-      <li><h3>Prüfen</h3><p>Antworten werden zusammengeführt und plausibilisiert. Widersprechen sich zwei Gastronomen, entscheidet ein Mensch.</p></li>
-      <li><h3>Schreiben</h3><p>Korrektur zurück nach destination.data — und eine Quittung mit Vorher und Nachher an alle, die geantwortet haben.</p></li>
+    <h2>Was der Ablauf macht</h2>
+    <ol class="schritte">
+      <li>
+        <span class="schritt-nr">Schritt 1</span>
+        <p><strong>Finden.</strong> Alle Datensätze lesen und drei Quellen vergleichen: die Datenbank, den eigenen Beschreibungstext, die Webseite des Betriebs.</p>
+      </li>
+      <li>
+        <span class="schritt-nr">Schritt 2</span>
+        <p><strong>Fragen.</strong> Eine Mail an den Wirt und an die Datenpflege. Ein Klick auf die richtige Fassung — oder eigene Zeiten eintragen.</p>
+      </li>
+      <li>
+        <span class="schritt-nr">Schritt 3</span>
+        <p><strong>Prüfen.</strong> Antworten zusammenführen. Unmögliche Zeiten werden abgelehnt. Bei Widerspruch entscheidet ein Mensch.</p>
+      </li>
+      <li>
+        <span class="schritt-nr">Schritt 4</span>
+        <p><strong>Zurückschreiben.</strong> Korrektur in die Datenbank, dazu eine Quittung mit Vorher und Nachher.</p>
+      </li>
     </ol>
   </section>
 
-  <hr class="kapitel-linie">
-
   <section>
-    <h2>Vier Quellen, ein Format</h2>
-    <div class="tabelle-rahmen">
-      <table>
-        <caption>Alle Quellen werden auf dieselbe Wochenstruktur gebracht — erst dann lässt sich vergleichen, ohne bei jedem Betrieb Alarm zu schlagen.</caption>
-        <thead>
-          <tr><th scope="col"></th><th scope="col">Quelle</th><th scope="col">Woher</th><th scope="col">Stand</th></tr>
-        </thead>
-        <tbody>
-          <tr><th scope="row">A</th><td>Strukturierte Öffnungszeiten</td><td class="klein">Feld <code>timeIntervals</code> in destination.data</td><td class="klein">läuft</td></tr>
-          <tr><th scope="row">B</th><td>Beschreibungstext</td><td class="klein">Freitext im <em>selben</em> Datensatz — bei 43 % vorhanden</td><td class="klein">läuft</td></tr>
-          <tr><th scope="row">C</th><td>Webseite des Betriebs</td><td class="klein">schema.org, sonst Fließtext — von einem Sprachmodell gelesen</td><td class="klein">läuft</td></tr>
-          <tr class="kein-d"><th scope="row">D</th><td>Google Maps</td><td class="klein">Places API, Feld <code>regularOpeningHours</code></td><td class="klein">vorgesehen — braucht Schlüssel</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="fluss">
-      <p>Quelle C ist der Schlüssel für die <strong>459 Datensätze</strong>, die Öffnungszeiten haben, aber keinen Freitext zum Vergleichen. Die waren vorher überhaupt nicht prüfbar — für sie ist die eigene Webseite die einzige Gegenprobe.</p>
-    </div>
-  </section>
-
-  <hr class="kapitel-linie">
-
-  <section>
-    <h2>Gemessen, nicht behauptet</h2>
+    <h2>Was dabei herauskam</h2>
     <div class="zahlen">
-      <div class="kachel"><span class="kachel-wert">1161</span><span class="kachel-text">Gastro-Datensätze in einem Lauf gelesen — in 49 Sekunden</span></div>
-      <div class="kachel"><span class="kachel-wert gut">216</span><span class="kachel-text">als einig erkannt und <strong>nicht angefasst</strong></span></div>
-      <div class="kachel"><span class="kachel-wert">45</span><span class="kachel-text">Betriebs-Webseiten geprüft (Budget pro Lauf)</span></div>
-      <div class="kachel"><span class="kachel-wert gut">6</span><span class="kachel-text">von 20 Seitentexten hat die KI <strong>selbst abgelehnt</strong></span></div>
-      <div class="kachel"><span class="kachel-wert gut">0</span><span class="kachel-text">erfundene Zeiten · 0 verwechselte Küchenzeiten</span></div>
-      <div class="kachel"><span class="kachel-wert gut">8/8</span><span class="kachel-text">neue Fälle von Hand gegengelesen — alle echt</span></div>
+      <div class="zahl"><span class="wert">1161</span><span>Datensätze geprüft — in 79 Sekunden</span></div>
+      <div class="zahl"><span class="wert gruen">216</span><span>waren in Ordnung und wurden nicht angefasst</span></div>
+      <div class="zahl"><span class="wert rot">9</span><span>echte Widersprüche gefunden</span></div>
+      <div class="zahl"><span class="wert gruen">0</span><span>erfundene Zeiten — jede geprüft</span></div>
     </div>
-    <p class="fluss" style="font-size:0.86rem;color:var(--tinte-leise)">
-      Alle Zahlen aus echten Läufen vom 01.09.2026, nicht aus einer Stichprobe. Die
-      Webseiten-Zahl ist ein bewusstes Budget pro Lauf: jeder Abruf geht nach außen, jeder
-      Modellaufruf kostet Geld. Das Budget bekommt zuerst, wer ohne Webseite gar nicht
-      prüfbar ist.
-    </p>
-    <div class="fluss">
-      <p><strong>Fehlalarme sind hier gefährlicher als übersehene Fälle.</strong> Nach der zweiten unnötigen Mail liest niemand mehr die dritte. Deshalb liest die KI nur — entscheiden darf sie nicht. Eine Fassung wird verworfen, wenn:</p>
-    </div>
-    <ul class="bremsen">
-      <li>die KI selbst passt — „auf Anfrage", mehrere Saisons, widersprüchliche Blöcke mehrerer Betriebe an einer Adresse</li>
-      <li>eine genannte Uhrzeit im Seitentext gar nicht vorkommt</li>
-      <li>kein einziger Wochentag belegt ist</li>
-      <li>sie unplausibel ist — durchgehend offen, Öffnung vor 5 Uhr, mehr als vier Ruhetage</li>
-      <li>nicht genau so viele Antworten zurückkommen wie Fragen gestellt wurden — dann wird <em>gar nichts</em> übernommen, sonst landen Zeiten beim falschen Betrieb</li>
-    </ul>
+    <p>Alle neun Fälle wurden von Hand nachgelesen. Alle neun waren echt. <strong>Fehlalarme sind hier gefährlicher als übersehene Fälle:</strong> nach der zweiten unnötigen Mail liest niemand mehr die dritte. Deshalb darf die KI lesen — entscheiden darf sie nicht.</p>
   </section>
 
-  <hr class="kapitel-linie">
-
   <section>
-    <h2>Beim zweiten Lauf zeigt sich, ob es taugt</h2>
-    <div class="fluss">
-      <p>Ein Ablauf, der beim ersten Mal gut aussieht, kann beim zweiten Mal zum Spam-Absender werden. Der Folgelauf über den inzwischen gewachsenen Bestand hat deshalb genau das geprüft:</p>
-    </div>
-    <div class="zahlen">
-      <div class="kachel"><span class="kachel-wert gut">48</span><span class="kachel-text">offene Fälle <strong>übersprungen</strong> — niemand wurde zweimal gefragt</span></div>
-      <div class="kachel"><span class="kachel-wert gut">5</span><span class="kachel-text">Betriebe, bei denen die Webseite die Datenbank <strong>bestätigt</strong> hat — keine Mail nötig</span></div>
-      <div class="kachel"><span class="kachel-wert">1</span><span class="kachel-text">neuer Fall — und der hat es in sich</span></div>
-    </div>
-    <div class="knall">
-      <span class="satz">Flamme AN!, Bad Salzuflen: die Umstellung wurde nur zur Hälfte eingetragen.</span>
-      <p>Auf der Webseite stehen zwei Blöcke — die alten Zeiten und, weiter unten, „unsere <strong>neuen</strong> Öffnungszeiten". Der Abgleich zeigt: Mittwoch und Donnerstag stehen in der Datenbank schon auf den neuen Zeiten, Freitag, Samstag und Sonntag noch auf den alten. Jemand hat angefangen und ist nicht fertig geworden. Ein halb gepflegter Datensatz sieht von außen aus wie ein gepflegter — genau deshalb findet ihn niemand von Hand.</p>
-    </div>
-  </section>
-
-  <hr class="kapitel-linie">
-
-  <section>
-    <h2>Zwei Muster, die dabei aufgefallen sind</h2>
-    <div class="fluss">
-      <p>Der Ablauf findet nicht nur einzelne Fehler, sondern zeigt, <em>wie</em> sie entstehen. Beides sind keine Tippfehler.</p>
-    </div>
-    <div class="muster">
-      <div>
-        <h3>Das Feld „Küchenzeiten" ist bei 88 % leer</h3>
-        <p>Nur <strong>9 %</strong> der Datensätze haben strukturierte Küchenzeiten — bei 995 ist das Feld leer. Wer weiß, dass Gäste vor allem „kann ich da jetzt essen?" fragen, trägt die Küchenzeit in das einzige Feld ein, das gefüllt wird. Essbar im Steigenberger: <code>Mo–Sa 12:30–22:00</code> in den Öffnungszeiten — das ist die Küchenzeit, und <strong>der Sonntag fehlt dadurch ganz</strong>, obwohl der Betrieb sonntags 07:00–23:00 offen ist.</p>
-        <p style="margin-top:0.7rem"><strong>Daraus ist eine zweite Frage geworden.</strong> Wo das Küchenfeld leer ist, fragt der Fragebogen jetzt zusätzlich: <em>„Wann ist Ihre warme Küche geöffnet?"</em> — vier Antworten, „Überspringen" vorausgewählt. Damit beantwortet der Datenpool nebenbei die Frage, die der Gast wirklich stellt.</p>
+    <h2>Zwei Dinge, die auffielen</h2>
+    <div class="karten">
+      <div class="karte">
+        <span class="kopf">Die Küchenzeit sitzt im falschen Feld</span>
+        <p>Bei <strong>88 %</strong> der Betriebe ist das Feld für Küchenzeiten leer. Also trägt man die Küchenzeit dort ein, wo sie gelesen wird — bei den Öffnungszeiten. Verständlich, aber es kostet: bei einem Hotel fiel dadurch der ganze Sonntag aus dem Datensatz.</p>
+        <p><strong>Daraus wurde eine zweite Frage:</strong> „Wann ist Ihre warme Küche geöffnet?" Ein Klick mehr — und der Gast bekommt endlich eine Antwort auf die Frage, die er wirklich stellt.</p>
       </div>
-      <div>
-        <h3>„Zuletzt geändert" sagt nichts über Pflege</h3>
-        <p>Nur 5 von 600 Datensätzen sind älter als 12 Monate — technische Importe fassen das Feld mit an. Der geplante Auslöser „seit 12 Monaten nicht aktualisiert" hätte zehn Datensätze geprüft. Auslöser ist deshalb die <strong>Abweichung selbst</strong>.</p>
+      <div class="karte">
+        <span class="kopf">Halb gepflegt sieht aus wie gepflegt</span>
+        <p>Ein Betrieb in Bad Salzuflen hat seine Zeiten geändert. In der Datenbank stehen Mittwoch und Donnerstag schon neu — Freitag, Samstag und Sonntag noch alt.</p>
+        <p>Jemand hat angefangen und ist nicht fertig geworden. Von außen ist das nicht zu sehen. Genau deshalb findet es niemand von Hand.</p>
       </div>
     </div>
   </section>
 
-  <hr class="kapitel-linie">
-
   <section>
-    <h2>Was heute läuft — und was bewusst verriegelt ist</h2>
-    <ul class="riegel">
-      <li><span class="stand laeuft">läuft</span><span>Erkennung über drei Quellen, Fragebogen im Browser, Auswertung, Plausibilität, Entscheidungsregeln, Quittungstext.</span></li>
-      <li><span class="stand laeuft">läuft</span><span><strong>Nichts wird zweimal gefragt.</strong> Ein Datensatz mit offenem Fall wird übersprungen, solange die Frist läuft oder ein Mensch dranschaut. Überschrieben werden nur abgeschlossene Fälle.</span></li>
-      <li><span class="stand laeuft">läuft</span><span><strong>Die Zusatzfrage nach der warmen Küche</strong> — gestellt nur dort, wo das Küchenfeld leer ist und im Freitext etwas steht.</span></li>
-      <li><span class="stand zu">gesperrt</span><span><strong>Mailversand.</strong> Die Gastronomen-Adressen kommen live aus der Schnittstelle und sind echt — im Probelauf 63 von 70. Doppelt verriegelt: Versand-Node abgeschaltet <em>und</em> Testmodus. Ergebnis: 70 von 70 an die Testadresse.</span></li>
-      <li><span class="stand zu">gesperrt</span><span><strong>Schreiben nach destination.data.</strong> Braucht einen technischen Benutzer mit Rechten nur auf diesen Mandanten und nur auf Öffnungszeiten. Bis dahin entsteht eine Änderungsliste. Scharf zu schalten ist ein Baustein-Tausch.</span></li>
-      <li><span class="stand wartet">geplant</span><span><strong>Google Maps als vierte Quelle.</strong> Der Fragebogen ist von Anfang an auf vier Fassungen ausgelegt. Es fehlt der Places-API-Schlüssel — und eine Prüfung, dass der gefundene Google-Ort wirklich derselbe Betrieb ist.</span></li>
+    <h2>Wo wir stehen</h2>
+    <ul class="stand-liste">
+      <li>
+        <span class="plakette ja">läuft</span>
+        <p>Finden, fragen, auswerten, entscheiden. Der Fragebogen ist im Netz. Wer schon gefragt wurde, wird nicht noch einmal gefragt.</p>
+      </li>
+      <li>
+        <span class="plakette nein">gesperrt</span>
+        <p><strong>Mails und Schreibzugriff — mit Absicht.</strong> Die Adressen der Betriebe sind echt. Solange getestet wird, geht jede Mail an eine Testadresse, und in die Datenbank wird nichts geschrieben. Zum Scharfschalten fehlen Rechte für einen technischen Benutzer.</p>
+      </li>
+      <li>
+        <span class="plakette spaeter">geplant</span>
+        <p><strong>Google Maps als vierte Quelle.</strong> Der Fragebogen ist darauf vorbereitet. Es fehlt ein Google-Schlüssel — und eine Prüfung, dass der gefundene Ort wirklich derselbe Betrieb ist.</p>
+      </li>
     </ul>
   </section>
 
-  <div class="schluss">
-    <span class="satz">Aus einer Bringschuld wird eine Ein-Klick-Bestätigung.</span>
-    <p>Niemand muss Daten pflegen. Es genügt, eine Frage zu beantworten, die schon fertig aufbereitet ist — und den Rest macht der Ablauf.</p>
-  </div>
+  <section>
+    <p class="leitsatz gruen">Aus einer Bringschuld wird ein Häkchen.</p>
+    <p>Niemand muss Daten pflegen. Es genügt, eine Frage zu beantworten, die schon fertig aufbereitet ist.</p>
+  </section>
 
   <footer>
     <span>NRW Tourismus Hackathon · 01.09.2026</span>
-    <span>Teutoburger Wald Tourismus · destination.data</span>
+    <span>Alle Zahlen aus echten Läufen, keine Stichprobe</span>
     <span>Gebaut mit n8n + Claude Code</span>
   </footer>
 
