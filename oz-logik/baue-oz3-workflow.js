@@ -172,11 +172,49 @@ for (const fall of faelle) {
     grund = grund + ' — bestätigt den bestehenden Eintrag, nichts zu ändern';
   }
 
+  // --- Küchenzeiten aus der Zusatzfrage ---------------------------------------
+  // Freiwillige Angabe, deshalb eigene, mildere Regeln: es genügt, wenn ÜBERHAUPT
+  // jemand geantwortet hat, und bei Uneinigkeit gewinnt der Gastronom — er weiß,
+  // wann bei ihm gekocht wird. Widersprechen sich mehrere, bleibt das Feld leer;
+  // eine falsche Küchenzeit ist schlechter als gar keine.
+  //
+  // Das Ergebnis wird NICHT nach destination.data geschrieben (dafür fehlen die
+  // Rechte), sondern in oz_ergebnisse festgehalten — als Vorschlag für das Feld
+  // kitchenTimeIntervals, das im Pool bei 88 % der Datensätze leer ist.
+  const kuecheAntworten = meine
+    .filter((a) => a.status === 'beantwortet' && String(a.kueche_json || '').trim())
+    .map((a) => ({ rolle: a.rolle, text: String(a.kueche_json).trim() }));
+
+  let kuecheNachher = '';
+  if (kuecheAntworten.length) {
+    const vomGastro = kuecheAntworten.filter((a) => a.rolle === 'gastronom');
+    const maßgeblich = vomGastro.length ? vomGastro : kuecheAntworten;
+    const fassungen = new Set(maßgeblich.map((a) => a.text));
+    if (fassungen.size === 1) {
+      kuecheNachher = [...fassungen][0];
+    } else {
+      hinweise.push('Küchenzeiten widersprüchlich, nicht übernommen');
+    }
+  }
+  if (kuecheNachher) hinweise.push('Küchenzeiten ergänzt: ' + kuecheNachher.slice(0, 80));
+
+  // Quittung bekommt jede Person, die geantwortet hat — und der Gastronom immer,
+  // auch wenn er geschwiegen hat: es geht um seinen Betrieb.
+  const quittungAn = beantwortet.map((a) => ({ rolle: a.rolle, email: a.email }));
+  const gastroZeile = meine.find((a) => a.rolle === 'gastronom');
+  if (gastroZeile && !quittungAn.some((q) => q.rolle === 'gastronom')) {
+    quittungAn.push({ rolle: 'gastronom', email: gastroZeile.email });
+  }
+
   ergebnisse.push({
     datensatz_id: String(fall.datensatz_id),
     titel: fall.titel,
+    ort: fall.ort || '',
+    gaeste_link: fall.gaeste_link || '',
+    quittung_an: quittungAn,
     vorher: (fall.variante_a || '').trim(),
     nachher,
+    kueche_nachher: kuecheNachher,
     konfidenz,
     entscheidungsgrund: grund,
     entschieden_am: jetzt.toISOString(),
@@ -190,6 +228,91 @@ for (const fall of faelle) {
 }
 
 return ergebnisse.map((e) => ({ json: e }));`;
+
+// --- Quittung -----------------------------------------------------------------
+// ⚠️ Vor dem ersten echten Versand ZWINGEND anzupassen — dieselben Werte wie in
+// baue-oz1-workflow.js.
+const ABSENDER = 'Teutoburger Wald Tourismus <noreply@BITTE-EINTRAGEN>';
+
+/**
+ * Testmodus — standardmäßig AN.
+ *
+ * Die Gastronomen-Adressen kommen live aus der Schnittstelle und sind echt.
+ * Solange dieser Schalter steht, geht JEDE Quittung an eine Testadresse. Die
+ * zweite Sperre ist der abgeschaltete Versand-Node darunter.
+ */
+const TESTMODUS = true;
+const TEST_EMPFAENGER = 'test-empfaenger@example.invalid';
+
+const CODE_QUITTUNG = `
+// =============================================================================
+// Quittung: was vorher stand, was jetzt gilt, wer bestätigt hat, Dankeschön.
+//
+// Nur für Fälle, in denen wirklich entschieden wurde. Bei Eskalation oder
+// "unbeantwortet" gibt es keine Quittung — es gibt nichts zu quittieren.
+// Die Erinnerung vor Fristablauf ist ein eigener Ablauf und hier NICHT enthalten.
+//
+// Nicht hier bearbeiten: mit "node oz-logik/baue-oz3-workflow.js" neu erzeugen.
+// =============================================================================
+
+const TESTMODUS = ${JSON.stringify(TESTMODUS)};
+const TEST_EMPFAENGER = ${JSON.stringify(TEST_EMPFAENGER)};
+
+const zeilen = [];
+
+for (const eingang of $('Entscheiden').all()) {
+  const e = eingang.json;
+  if (e.neuer_status !== 'entschieden' && e.neuer_status !== 'bestaetigt') continue;
+
+  const bestaetigt = e.neuer_status === 'bestaetigt';
+  const vorher = e.vorher || 'keine Öffnungszeiten hinterlegt';
+
+  for (const person of (e.quittung_an || [])) {
+    const text = [
+      'Guten Tag,',
+      '',
+      'vielen Dank für Ihre Rückmeldung zu ' + e.titel + (e.ort ? ' in ' + e.ort : '') + '.',
+      '',
+      bestaetigt
+        ? 'Ihre Angaben bestätigen den bestehenden Eintrag — wir mussten nichts ändern:'
+        : 'Bisher war hinterlegt:',
+      bestaetigt ? e.nachher : vorher,
+      bestaetigt ? null : '',
+      bestaetigt ? null : 'Jetzt gültig:',
+      bestaetigt ? null : e.nachher,
+      '',
+      // Die Küchenzeit kommt aus der freiwilligen Zusatzfrage. Sie wird nur
+      // erwähnt, wenn wirklich jemand geantwortet hat — sonst wirkt die Mail,
+      // als hätte man etwas geändert, was man nicht angefasst hat.
+      e.kueche_nachher ? 'Zusätzlich haben wir Ihre Küchenzeiten aufgenommen:' : null,
+      e.kueche_nachher || null,
+      e.kueche_nachher ? 'Damit sehen Gäste künftig nicht nur, ob geöffnet ist, sondern auch, wann gekocht wird.' : null,
+      e.kueche_nachher ? '' : null,
+      'Grundlage: ' + e.entscheidungsgrund + '.',
+      e.hinweis ? '(' + e.hinweis + ')' : null,
+      '',
+      e.gaeste_link ? 'So sieht der Eintrag für Gäste aus:' : null,
+      e.gaeste_link || null,
+      e.gaeste_link ? '' : null,
+      'Danke, dass Sie mitgeholfen haben — davon profitieren die Gäste unmittelbar.',
+      '',
+      'Teutoburger Wald Tourismus',
+    ].filter((zeile) => zeile !== null).join('\\n');
+
+    zeilen.push({
+      datensatz_id: e.datensatz_id,
+      rolle: person.rolle,
+      an: TESTMODUS ? TEST_EMPFAENGER : person.email,
+      echter_empfaenger: person.email,
+      betreff: bestaetigt
+        ? 'Bestätigt: Öffnungszeiten von ' + e.titel
+        : 'Geändert: Öffnungszeiten von ' + e.titel,
+      text,
+    });
+  }
+}
+
+return zeilen.map((z) => ({ json: z }));`;
 
 const nodes = [
   {
@@ -229,7 +352,7 @@ const nodes = [
       columns: {
         mappingMode: 'defineBelow',
         value: Object.fromEntries([
-          'datensatz_id', 'vorher', 'nachher', 'konfidenz',
+          'datensatz_id', 'vorher', 'nachher', 'kueche_nachher', 'konfidenz',
           'entscheidungsgrund', 'entschieden_am', 'geschrieben', 'hinweis',
         ].map((s) => [s, '={{ $json.' + s + ' }}'])),
         matchingColumns: [],
@@ -254,6 +377,24 @@ const nodes = [
         matchingColumns: [],
         schema: [],
       },
+    },
+  },
+  {
+    id: 'quittung-bauen', name: 'Quittung bauen', type: 'n8n-nodes-base.code', typeVersion: 2,
+    position: [1020, 30], parameters: { mode: 'runOnceForAllItems', jsCode: CODE_QUITTUNG },
+  },
+  {
+    // ⚠️ ABGESCHALTET. Zweite Sperre neben TESTMODUS. Erst einschalten, wenn
+    // Absenderadresse und SMTP-Credential stehen — siehe Prüfbericht.
+    id: 'quittung-senden', name: 'Quittung senden', type: 'n8n-nodes-base.emailSend',
+    typeVersion: 2.1, position: [1260, 30], disabled: true,
+    parameters: {
+      fromEmail: ABSENDER,
+      toEmail: '={{ $json.an }}',
+      subject: '={{ $json.betreff }}',
+      emailFormat: 'text',
+      text: '={{ $json.text }}',
+      options: {},
     },
   },
 ];
@@ -313,6 +454,8 @@ const connections = {
   'Antworten lesen': { main: [verbindung('Entscheiden')] },
   Entscheiden: { main: [verbindung('Ergebnis festhalten')] },
   'Ergebnis festhalten': { main: [verbindung('Fall abschließen')] },
+  'Fall abschließen': { main: [verbindung('Quittung bauen')] },
+  'Quittung bauen': { main: [verbindung('Quittung senden')] },
 };
 
 const workflow = {

@@ -43,6 +43,12 @@ REGELN (streng einhalten):
   gemeint ist.
 - Enthalten mehrere Abschnitte WIDERSPRÜCHLICHE Zeiten, gehören sie oft zu verschiedenen
   Betrieben derselben Adresse (Hotelrestaurant, Bar, Café). Dann ableitbar=false.
+- EINE Ausnahme davon: Ist ein Block ausdrücklich als der gültige gekennzeichnet — "unsere
+  neuen Öffnungszeiten", "ab sofort", "gültig ab <Datum>", "aktuelle Öffnungszeiten" —, dann
+  gilt dieser Block, und der andere wird ignoriert. Setze in diesem Fall "zitat" auf die
+  Kennzeichnung samt Zeiten, damit nachvollziehbar ist, warum du dich entschieden hast.
+  Ohne eine solche Kennzeichnung bleibt es bei ableitbar=false. Ein bloß späteres Datum im
+  Text genügt nicht — die Kennzeichnung muss sich auf die Öffnungszeiten beziehen.
 - "ab 18 Uhr" ohne Ende: status=offen, intervalle=[{von:"18:00", bis:"23:59"}],
   offenesEnde=true.
 - "durchgehend geöffnet" / "rund um die Uhr": intervalle=[{von:"00:00", bis:"23:59"}].
@@ -106,6 +112,28 @@ Im n8n-KI-Node als „Structured Output" hinterlegen — nicht als Freitext pars
 
 Die Ausgabe lässt sich direkt in das Format aus [normalisieren.js](normalisieren.js) überführen
 (`status` / `iv` in Minuten) und dann mit `vergleiche()` gegen destination.data stellen.
+
+## Referenzfall für die Ausnahme-Regel: *Flamme AN!*, Bad Salzuflen (#100031148)
+
+Der Fall, der die Regel überhaupt nötig gemacht hat — gefunden im Lauf vom 01.09.2026. Auf der
+Seite stehen **zwei** Blöcke:
+
+```
+[Abschnitt 1]  Unsere Öffnungszeiten: Mo-Fr (12.00 – 14.00 // 16.00 – 20.30) Sa-So (geschlossen)
+[Abschnitt 3]  Unsere neuen Öffnungszeiten: Mo-Di (geschlossen) Mi-Do (12.00 – 14.00 // 16.30 – 21.00)
+               Fr-Sa (12.00 – 21.00) So (16.00 – 21.00)
+```
+
+Nach der alten Formulierung hätte die KI hier `ableitbar=false` liefern müssen. Sie hat
+stattdessen den mit „neue" gekennzeichneten Block genommen — inhaltlich richtig, aber es war
+Ermessen und keine Regel. Der Abgleich brachte einen echten Fund zutage: die Datenbank hatte die
+Umstellung nur zur Hälfte mitgemacht (Mi und Do schon auf den neuen Zeiten, Fr, Sa und So noch
+auf den alten).
+
+Seit dem 01.09.2026 steht die Ausnahme deshalb ausdrücklich im Prompt. Sie lässt sich **nicht**
+in `ki-auswertung-test.js` prüfen — das ist Modellverhalten, kein Code. Nachweis ist dieser
+Datensatz im nächsten Lauf: er muss weiterhin die Zeiten aus dem „neuen" Block liefern und im
+`zitat` die Kennzeichnung nennen.
 
 ## Was der Test noch gezeigt hat
 

@@ -190,6 +190,20 @@ for (const d of datensaetze) {
     // neben der Fassung — wer bestätigt, soll wissen, was er bestätigt.
     variante_c_quelle: '',
     kuechenzeiten: freitext(d, 'KITCHEN_ZEITEN').replace(/\\s+/g, ' ').slice(0, 200),
+    // Soll der Fragebogen zusätzlich nach den Küchenzeiten fragen?
+    //
+    // Nur wenn es etwas zu holen gibt: das strukturierte Feld ist leer, aber im
+    // Freitext stehen Küchenzeiten. Gemessen über den ganzen Pool haben 97 %
+    // strukturierte Öffnungszeiten, aber nur 9 % strukturierte Küchenzeiten —
+    // bei 88 % ist das Feld leer. Dann wandert die Küchenzeit ins
+    // Öffnungszeiten-Feld, weil das die Zahl ist, nach der Gäste fragen. Der
+    // Preis dafür steht im Datensatz der Essbar im Steigenberger: weil die Küche
+    // sonntags zu hat, fehlt dort der Sonntag ganz.
+    //
+    // Bewusst NICHT bei jedem Fall fragen. Ein Fragebogen, der länger wird,
+    // wird seltener ausgefüllt.
+    kueche_fragen: (d.kitchenTimeIntervals || []).length === 0
+      && !!freitext(d, 'KITCHEN_ZEITEN').trim(),
     gaeste_link: oeffentlicherLink(d) || '',
     // Wird nicht in oz_faelle gespeichert (dort gibt es keine Spalte dafür),
     // sondern von der Empfänger-Ermittlung weiter unten aus diesem Node gelesen.
@@ -526,6 +540,12 @@ REGELN (streng einhalten):
   gemeint ist.
 - Enthalten mehrere Abschnitte WIDERSPRÜCHLICHE Zeiten, gehören sie oft zu verschiedenen
   Betrieben derselben Adresse (Hotelrestaurant, Bar, Café). Dann ableitbar=false.
+- EINE Ausnahme davon: Ist ein Block ausdrücklich als der gültige gekennzeichnet — "unsere
+  neuen Öffnungszeiten", "ab sofort", "gültig ab <Datum>", "aktuelle Öffnungszeiten" —, dann
+  gilt dieser Block, und der andere wird ignoriert. Setze in diesem Fall "zitat" auf die
+  Kennzeichnung samt Zeiten, damit nachvollziehbar ist, warum du dich entschieden hast.
+  Ohne eine solche Kennzeichnung bleibt es bei ableitbar=false. Ein bloß späteres Datum im
+  Text genügt nicht — die Kennzeichnung muss sich auf die Öffnungszeiten beziehen.
 - "ab 18 Uhr" ohne Ende: status=offen, intervalle=[{von:"18:00", bis:"23:59"}],
   offenesEnde=true.
 - "durchgehend geöffnet" / "rund um die Uhr": intervalle=[{von:"00:00", bis:"23:59"}].
@@ -957,6 +977,7 @@ const workflow = {
           value: Object.fromEntries([
             'datensatz_id', 'titel', 'ort', 'prio', 'grund', 'weg',
             'variante_a', 'variante_b', 'variante_c', 'variante_c_quelle', 'kuechenzeiten',
+            'kueche_fragen',
             'gaeste_link', 'bearbeitungslink', 'bearbeitungslink_gueltig_bis',
             'status', 'frist', 'angelegt_am',
           ].map((spalte) => [spalte, '={{ $json.' + spalte + ' }}'])),

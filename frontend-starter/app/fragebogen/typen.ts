@@ -55,7 +55,23 @@ export type FallDaten = {
   varianten: Variante[];
   /** Küchenzeiten sind KEINE Öffnungszeiten, werden aber als Hinweis angezeigt. */
   kuechenzeiten?: string;
+  /**
+   * Zusatzfrage nach den Küchenzeiten — nur gestellt, wenn im Datensatz das
+   * strukturierte Küchenfeld leer ist, im Freitext aber Küchenzeiten stehen.
+   *
+   * Hintergrund: Im ganzen Datenpool haben 97 % strukturierte Öffnungszeiten,
+   * aber nur 9 % strukturierte Küchenzeiten. Bei 88 % ist das Feld leer — und
+   * dann wandert die Küchenzeit ins Öffnungszeiten-Feld, weil das die Zahl ist,
+   * nach der Gäste fragen („kann ich da jetzt essen?"). Diese Frage schließt die
+   * Lücke, ohne dass jemand ein Formular in der Datenbank ausfüllen muss.
+   *
+   * Bewusst freiwillig: Wer sie überspringt, hat trotzdem geantwortet.
+   */
+  kueche?: { fragen: boolean; hinweis?: string };
 };
+
+/** Antwort auf die Küchen-Zusatzfrage. `unbekannt` heißt übersprungen. */
+export type KuecheArt = "unbekannt" | "wie-oben" | "andere" | "keine";
 
 export type Zeitspanne = { von: string; bis: string };
 
@@ -87,7 +103,10 @@ function alsMinuten(hhmm: string): number | null {
  *
  * @returns Liste von Fehlermeldungen; leer heißt: in Ordnung.
  */
-export function pruefeEigeneAngaben(woche: EigeneWoche): string[] {
+export function pruefeEigeneAngaben(
+  woche: EigeneWoche,
+  was: "Öffnungszeiten" | "Küchenzeiten" = "Öffnungszeiten",
+): string[] {
   const fehler: string[] = [];
   let offeneTage = 0;
 
@@ -132,7 +151,7 @@ export function pruefeEigeneAngaben(woche: EigeneWoche): string[] {
 
   if (offeneTage === 0) {
     fehler.push(
-      "An keinem Tag sind Öffnungszeiten eingetragen. Bitte mindestens einen Tag ausfüllen.",
+      `An keinem Tag sind ${was} eingetragen. Bitte mindestens einen Tag ausfüllen.`,
     );
   }
 

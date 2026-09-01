@@ -103,6 +103,14 @@ const frist = fall.frist
   ? new Date(fall.frist).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   : '';
 
+// Zusatzfrage nach den Küchenzeiten — nur wenn OZ-1 sie vorgemerkt hat, also
+// wenn das strukturierte Küchenfeld leer ist, aber ein Küchen-Freitext existiert.
+// Bei 88 % der Datensätze im Pool ist dieses Feld leer; genau deshalb landet die
+// Küchenzeit oft im Öffnungszeiten-Feld. Ein Klick mehr schließt die Lücke.
+const kueche = fall.kueche_fragen
+  ? { fragen: true, hinweis: String(fall.kuechenzeiten || '').trim() }
+  : { fragen: false, hinweis: '' };
+
 return [{
   json: {
     status: 'offen',
@@ -111,6 +119,7 @@ return [{
     frist,
     varianten,
     kuechenzeiten: fall.kuechenzeiten || '',
+    kueche,
   },
 }];`;
 
@@ -144,6 +153,36 @@ if (auswahl === 'eigene') {
   return [{ json: { ok: false, fehler: ['Unbekannte Auswahl.'], token: zugang.token } }];
 }
 
+// --- Zusatzantwort zu den Küchenzeiten ---------------------------------------
+// Freiwillig: fehlt sie, ist das kein Fehler. Kommt sie, wird sie mit denselben
+// harten Regeln geprüft wie die Öffnungszeiten — eine Küche, die um 23:00 öffnet
+// und um 09:00 schließt, ist kein Sonderfall, sondern ein Tippfehler.
+let kuecheText = '';
+const kuecheRoh = eingang.kueche && typeof eingang.kueche === 'object' ? eingang.kueche : null;
+
+if (kuecheRoh) {
+  const art = String(kuecheRoh.art || '').trim();
+  if (art === 'wie-oben') {
+    kuecheText = 'wie die Öffnungszeiten';
+  } else if (art === 'keine') {
+    kuecheText = 'keine warme Küche';
+  } else if (art === 'andere') {
+    const geprueftK = pruefeEingabe(kuecheRoh.tage);
+    if (!geprueftK.ok) {
+      return [{
+        json: {
+          ok: false,
+          fehler: geprueftK.fehler.map((f) => 'Küchenzeiten — ' + f),
+          token: zugang.token,
+        },
+      }];
+    }
+    kuecheText = wocheAlsText(geprueftK.woche);
+  } else if (art && art !== 'unbekannt') {
+    return [{ json: { ok: false, fehler: ['Unbekannte Angabe zu den Küchenzeiten.'], token: zugang.token } }];
+  }
+}
+
 return [{
   json: {
     ok: true,
@@ -151,6 +190,8 @@ return [{
     datensatz_id: zugang.datensatz_id,
     rolle: zugang.rolle,
     auswahl,
+    // Leer heißt: nicht beantwortet. Das ist ausdrücklich erlaubt.
+    kueche_json: kuecheText,
     // Bei einer freien Eingabe steht hier die normalisierte Fassung als Text —
     // dieselbe Schreibweise wie variante_a/b/c, damit OZ-3 sie direkt vergleichen kann.
     eigene_json: eigeneText,
@@ -249,6 +290,7 @@ const nodes = [
           status: 'beantwortet',
           auswahl: '={{ $json.auswahl }}',
           eigene_json: '={{ $json.eigene_json }}',
+          kueche_json: '={{ $json.kueche_json }}',
           beantwortet_am: '={{ $json.beantwortet_am }}',
         },
         matchingColumns: [],

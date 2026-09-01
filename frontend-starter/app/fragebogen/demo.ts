@@ -20,6 +20,9 @@ export const DEMO_FALL: FallDaten = {
   rolle: "bearbeiter",
   frist: "07.09.2026",
   kuechenzeiten: "Warme Küche bis 21:30 Uhr",
+  // Im Datensatz steht die Küchenzeit nur als Freitext, das strukturierte Feld
+  // ist leer — genau der Fall, für den die Zusatzfrage gedacht ist.
+  kueche: { fragen: true, hinweis: "Warme Küche bis 21:30 Uhr" },
   varianten: [
     {
       key: "A",
