@@ -181,9 +181,29 @@ for (const fall of faelle) {
   // Das Ergebnis wird NICHT nach destination.data geschrieben (dafür fehlen die
   // Rechte), sondern in oz_ergebnisse festgehalten — als Vorschlag für das Feld
   // kitchenTimeIntervals, das im Pool bei 88 % der Datensätze leer ist.
+  //
+  // ⚠️ "Genauso wie die Öffnungszeiten" muss ZUERST in echte Zeiten aufgelöst
+  // werden. Sonst passiert zweierlei, und beides ist falsch:
+  //
+  //   1. Person A klickt "wie die Öffnungszeiten", Person B tippt genau dieselben
+  //      Zeiten von Hand ein. Zeichenweise verglichen sind das zwei Fassungen →
+  //      "widersprüchlich", obwohl beide dasselbe gesagt haben.
+  //   2. In kueche_nachher stünde der Satz statt der Zeiten — und das ist
+  //      ausgerechnet die wahrscheinlichste Antwort, denn die ganze Prämisse
+  //      dieser Frage ist, dass Öffnungs- und Küchenzeit oft dasselbe sind.
+  //
+  const WIE_OBEN = 'wie die Öffnungszeiten';
+  const OHNE_KUECHE = 'keine warme Küche';
+  const bezugsfassung = nachher || (fall.variante_a || '').trim();
+
   const kuecheAntworten = meine
     .filter((a) => a.status === 'beantwortet' && String(a.kueche_json || '').trim())
-    .map((a) => ({ rolle: a.rolle, text: String(a.kueche_json).trim() }));
+    .map((a) => {
+      const roh = String(a.kueche_json).trim();
+      return { rolle: a.rolle, text: roh === WIE_OBEN ? bezugsfassung : roh, roh };
+    })
+    // "wie oben" ohne bekannte Öffnungszeiten ist keine Aussage.
+    .filter((a) => a.text);
 
   let kuecheNachher = '';
   if (kuecheAntworten.length) {
@@ -192,11 +212,21 @@ for (const fall of faelle) {
     const fassungen = new Set(maßgeblich.map((a) => a.text));
     if (fassungen.size === 1) {
       kuecheNachher = [...fassungen][0];
+      if (maßgeblich.some((a) => a.roh === WIE_OBEN)) {
+        hinweise.push('Küchenzeiten als "wie die Öffnungszeiten" gemeldet und aufgelöst');
+      }
     } else {
       hinweise.push('Küchenzeiten widersprüchlich, nicht übernommen');
     }
   }
-  if (kuecheNachher) hinweise.push('Küchenzeiten ergänzt: ' + kuecheNachher.slice(0, 80));
+  // OHNE_KUECHE bleibt bewusst als Wortlaut stehen: das ist keine Zeitangabe,
+  // sondern die Aussage "hier wird nicht gekocht". oz-schreiben muss daraus ein
+  // leeres kitchenTimeIntervals machen, nicht diesen Satz.
+  if (kuecheNachher && kuecheNachher !== OHNE_KUECHE) {
+    hinweise.push('Küchenzeiten ergänzt: ' + kuecheNachher.slice(0, 80));
+  } else if (kuecheNachher === OHNE_KUECHE) {
+    hinweise.push('Betrieb hat keine warme Küche');
+  }
 
   // Quittung bekommt jede Person, die geantwortet hat — und der Gastronom immer,
   // auch wenn er geschwiegen hat: es geht um seinen Betrieb.
@@ -271,7 +301,13 @@ for (const eingang of $('Entscheiden').all()) {
     const text = [
       'Guten Tag,',
       '',
-      'vielen Dank für Ihre Rückmeldung zu ' + e.titel + (e.ort ? ' in ' + e.ort : '') + '.',
+      // Wer nicht selbst geantwortet hat (Rückfall an die Redaktion), bekommt
+      // "Mithilfe" statt "Rückmeldung" — sonst bedankt sich die Mail für etwas,
+      // das diese Person gar nicht getan hat.
+      (['gastronom', 'bearbeiter', 'ersteller'].includes(person.rolle)
+        ? 'vielen Dank für Ihre Rückmeldung'
+        : 'vielen Dank für Ihre Mithilfe')
+        + ' zu ' + e.titel + (e.ort ? ' in ' + e.ort : '') + '.',
       '',
       bestaetigt
         ? 'Ihre Angaben bestätigen den bestehenden Eintrag — wir mussten nichts ändern:'
@@ -284,9 +320,14 @@ for (const eingang of $('Entscheiden').all()) {
       // Die Küchenzeit kommt aus der freiwilligen Zusatzfrage. Sie wird nur
       // erwähnt, wenn wirklich jemand geantwortet hat — sonst wirkt die Mail,
       // als hätte man etwas geändert, was man nicht angefasst hat.
-      e.kueche_nachher ? 'Zusätzlich haben wir Ihre Küchenzeiten aufgenommen:' : null,
-      e.kueche_nachher || null,
-      e.kueche_nachher ? 'Damit sehen Gäste künftig nicht nur, ob geöffnet ist, sondern auch, wann gekocht wird.' : null,
+      e.kueche_nachher === 'keine warme Küche'
+        ? 'Außerdem haben wir vermerkt, dass es bei Ihnen keine warme Küche gibt.'
+        : null,
+      e.kueche_nachher && e.kueche_nachher !== 'keine warme Küche'
+        ? 'Zusätzlich haben wir Ihre Küchenzeiten aufgenommen:' : null,
+      e.kueche_nachher && e.kueche_nachher !== 'keine warme Küche' ? e.kueche_nachher : null,
+      e.kueche_nachher && e.kueche_nachher !== 'keine warme Küche'
+        ? 'Damit sehen Gäste künftig nicht nur, ob geöffnet ist, sondern auch, wann gekocht wird.' : null,
       e.kueche_nachher ? '' : null,
       'Grundlage: ' + e.entscheidungsgrund + '.',
       e.hinweis ? '(' + e.hinweis + ')' : null,

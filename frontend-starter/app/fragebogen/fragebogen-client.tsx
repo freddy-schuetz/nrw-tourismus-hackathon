@@ -254,7 +254,16 @@ export default function FragebogenClient() {
               ) : null}
               . Wann ist Ihre <strong>warme Küche</strong> geöffnet?
             </p>
-            <div className="mt-3 flex flex-col gap-2">
+            {/*
+              Eigene Gruppe mit eigenem Namen: die Legende des Fieldsets sagt nur
+              "Noch eine Frage" und damit nichts über das Thema. Ein Screenreader
+              würde die vier Optionen sonst ohne jeden Bezug vorlesen.
+            */}
+            <div
+              role="radiogroup"
+              aria-label="Wann ist Ihre warme Küche geöffnet?"
+              className="mt-3 flex flex-col gap-2"
+            >
               {(
                 [
                   ["unbekannt", "Überspringen — weiß ich gerade nicht"],
@@ -296,8 +305,17 @@ export default function FragebogenClient() {
           )
         )}
 
+        {/*
+          role="alert" sorgt dafür, dass ein Screenreader die Fehler vorliest,
+          sobald sie erscheinen. Ohne das merkt jemand, der die Seite nicht
+          sieht, gar nicht, warum das Absenden nichts tut.
+        */}
         {fehler.length > 0 && (
-          <ul className="list-inside list-disc rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <ul
+            role="alert"
+            aria-live="assertive"
+            className="list-inside list-disc rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900"
+          >
             {fehler.map((f, i) => (
               <li key={i}>{f}</li>
             ))}
@@ -365,6 +383,11 @@ function WochenFelder({
                 type="checkbox"
                 checked={woche[key].geschlossen}
                 onChange={(e) => schalteGeschlossen(key, e.target.checked)}
+                // Der Wochentag steht im span DAVOR, also ausserhalb dieses
+                // Labels — ohne aria-label heissen alle vierzehn Kästchen nur
+                // "geschlossen", und mit dem Screenreader ist nicht erkennbar,
+                // welcher Tag und welches Raster gemeint ist.
+                aria-label={`${legende}: ${label} geschlossen`}
               />
               geschlossen
             </label>
