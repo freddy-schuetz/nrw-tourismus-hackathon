@@ -8,6 +8,32 @@ export function webhookUrl(path: string): string {
   return `${BASE}/webhook/${clean}`;
 }
 
+/** Daten aus einem n8n-Webhook lesen, z.B. einen Fragebogen anhand seines Tokens. */
+export async function getWebhook<T = unknown>(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<T> {
+  if (!BASE) {
+    throw new Error(
+      "NEXT_PUBLIC_N8N_BASE ist nicht gesetzt — trage deine n8n-URL in .env.local ein.",
+    );
+  }
+  const url = new URL(webhookUrl(path));
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`Webhook-Fehler ${res.status}: ${await res.text()}`);
+  }
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as T;
+  }
+}
+
 export async function postWebhook<T = unknown>(
   path: string,
   body: unknown,
