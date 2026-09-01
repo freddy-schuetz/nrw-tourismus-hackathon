@@ -439,6 +439,139 @@ function wocheAlsText(woche) {
   return TAGE.map((t) => kurz[t] + ' ' + alsText(woche[t])).join(' · ');
 }
 
+const KURZTAG = {
+  Monday: 'Mo', Tuesday: 'Di', Wednesday: 'Mi', Thursday: 'Do',
+  Friday: 'Fr', Saturday: 'Sa', Sunday: 'So',
+};
+
+/**
+ * Umkehrung von `wocheAlsText`: "Mo geschlossen · Di 08:00–18:30 · …" → Map je
+ * Wochentag.
+ *
+ * Gebraucht in `OZ-2`: die Data Table speichert die Fassungen als kompakten Text
+ * (damit die Redaktion sie lesen kann), die Fragebogen-Seite braucht sie aber pro
+ * Wochentag. Weil beide Richtungen hier stehen, können sie nicht auseinanderlaufen.
+ *
+ * @returns {Object} z.B. { Monday: "geschlossen", Tuesday: "08:00–18:30", … }
+ */
+function wocheAusText(text) {
+  const map = {};
+  if (!text) return map;
+  for (const stueck of String(text).split('·')) {
+    const m = /^\s*(Mo|Di|Mi|Do|Fr|Sa|So)\s+(.+?)\s*$/.exec(stueck);
+    if (!m) continue;
+    const tag = TAGE.find((t) => KURZTAG[t] === m[1]);
+    if (tag) map[tag] = m[2];
+  }
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Plausibilitätsprüfung freier Eingaben
+// ---------------------------------------------------------------------------
+
+const TAG_LABEL = {
+  Monday: 'Montag', Tuesday: 'Dienstag', Wednesday: 'Mittwoch', Thursday: 'Donnerstag',
+  Friday: 'Freitag', Saturday: 'Samstag', Sunday: 'Sonntag',
+};
+
+/**
+ * Prüft die Eingaben aus dem Fragebogen — die **verbindliche** Fassung.
+ *
+ * Der gleichlautende Check im Browser
+ * (`frontend-starter/app/fragebogen/typen.ts`) dient nur der sofortigen
+ * Rückmeldung; entschieden wird hier. Wer die Regeln ändert, ändert sie hier
+ * zuerst.
+ *
+ * Erwartetes Format (so schickt es die Fragebogen-Seite):
+ *   { Monday: { geschlossen: false, zeiten: [{ von: "11:00", bis: "14:00" }] }, … }
+ *
+ * @returns {{ok: boolean, fehler: string[], woche: Object|null}}
+ *   `woche` ist die normalisierte Fassung im Format dieses Moduls.
+ */
+function pruefeEingabe(eingabe) {
+  const fehler = [];
+  const woche = UNBEKANNT();
+  let offeneTage = 0;
+
+  if (!eingabe || typeof eingabe !== 'object') {
+    return { ok: false, fehler: ['Keine Angaben übermittelt.'], woche: null };
+  }
+
+  for (const tag of TAGE) {
+    const label = TAG_LABEL[tag];
+    const angabe = eingabe[tag];
+    if (!angabe || typeof angabe !== 'object') continue;
+
+    if (angabe.geschlossen) {
+      woche[tag].status = 'geschlossen';
+      woche[tag].iv = [];
+      continue;
+    }
+
+    const gefuellt = (angabe.zeiten || []).filter((z) => z && (z.von || z.bis));
+    if (gefuellt.length === 0) continue;
+
+    offeneTage++;
+    for (const z of gefuellt) {
+      if (!z.von || !z.bis) {
+        fehler.push(`${label}: Es fehlt eine Uhrzeit — bitte "von" und "bis" ausfüllen.`);
+        continue;
+      }
+      const von = zeitZuMinuten(z.von);
+      const bis = zeitZuMinuten(z.bis);
+      if (von === null || bis === null) {
+        fehler.push(`${label}: Uhrzeit nicht lesbar (${z.von}–${z.bis}).`);
+        continue;
+      }
+      if (von === bis) {
+        fehler.push(`${label}: Öffnen und Schließen sind gleich (${z.von}).`);
+        continue;
+      }
+      // Über Mitternacht ist erlaubt — ergaenze() rechnet +1440.
+      ergaenze(woche[tag], von, bis);
+    }
+
+    const iv = woche[tag].iv;
+    for (let i = 1; i < iv.length; i++) {
+      if (iv[i][0] < iv[i - 1][1]) {
+        fehler.push(`${label}: Die beiden Zeiträume überschneiden sich.`);
+        break;
+      }
+    }
+    if (iv.length > 2) {
+      fehler.push(`${label}: Mehr als zwei Zeiträume — bitte auf zwei zusammenfassen.`);
+    }
+  }
+
+  if (offeneTage === 0) {
+    fehler.push('An keinem Tag sind Öffnungszeiten eingetragen. Bitte mindestens einen Tag ausfüllen.');
+  }
+
+  return { ok: fehler.length === 0, fehler, woche: fehler.length === 0 ? woche : null };
+}
+
+/**
+ * Auffälligkeiten, die kein Fehler sind, aber ein Mensch sehen sollte.
+ * @returns {string[]}
+ */
+function auffaelligkeiten(woche) {
+  const hinweise = [];
+  let ruhetage = 0;
+  for (const tag of TAGE) {
+    const t = woche[tag];
+    if (t.status === 'geschlossen') { ruhetage++; continue; }
+    if (t.status !== 'offen') continue;
+    for (const [von, bis] of t.iv) {
+      if (von === 0 && bis === 1440) hinweise.push(`${TAG_LABEL[tag]}: durchgehend offen`);
+      if (von < 5 * 60) hinweise.push(`${TAG_LABEL[tag]}: Öffnung vor 05:00`);
+      if (bis > 27 * 60) hinweise.push(`${TAG_LABEL[tag]}: Schließung nach 03:00`);
+    }
+  }
+  if (ruhetage > 4) hinweise.push(`${ruhetage} Ruhetage — ungewöhnlich viele`);
+  return hinweise;
+}
+
 // ---------------------------------------------------------------------------
 // Link auf die Gästeansicht
 // ---------------------------------------------------------------------------
@@ -469,6 +602,8 @@ function oeffentlicherLink(datensatz, basis = 'https://www.teutonavigator.de/de/
 module.exports = {
   TAGE,
   oeffentlicherLink,
+  pruefeEingabe,
+  auffaelligkeiten,
   /** Leere Woche im Normalformat — für weitere Quellen (Webseite, Google). */
   leereWoche: UNBEKANNT,
   ergaenze,
@@ -477,6 +612,7 @@ module.exports = {
   vergleiche,
   alsText,
   wocheAlsText,
+  wocheAusText,
   zeitZuMinuten,
   tageAusText,
   zeitenAusText,

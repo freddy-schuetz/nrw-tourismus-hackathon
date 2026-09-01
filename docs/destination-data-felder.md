@@ -484,3 +484,421 @@ bekannt.
 | `gdpLl4jiL3UIPrFp` | Lesen/Schreiben in one.data — die sauberste Vorlage (suchen · holen · schreiben) |
 | `GbcICEJNEQ9v56J4` | Veranstaltung in one.data anlegen oder aktualisieren (aktiv, mit Dublettenprüfung) |
 | `fCXK1xaOouuk4sQC` | one.data: Veranstaltung schreiben (Sub-Workflow) — Muster für `oz-schreiben` |
+
+---
+
+## Probe am `CUSTOM.destinationData`-Node (01.09.2026)
+
+Mit einem Wegwerf-Workflow (nur lesend, danach gelöscht) wurde geprüft, wie weit der Schreibweg
+trägt. Ergebnis in einem Satz: **die Suche funktioniert, quickedit ist durch Rechte gesperrt.**
+
+### Credential
+
+Der Node braucht `destinationOneIdOAuth2Api`. In der Instanz vorhanden:
+`76y7pqqjt8V60jfE` — „id.destination.one SSO account 38". Dasselbe Credential nutzen die
+aktiven one.data-Workflows. Im Workflow-JSON der Public API ist das Feld `credentials` bei
+manchen Nodes `null`, bei anderen gefüllt — nicht darauf verlassen, sondern in einem **aktiven**
+Workflow nachsehen.
+
+⚠️ Es ist ein **persönliches SSO-Konto**. Alle Änderungen würden darauf gebucht — für einen
+automatischen Ablauf die falsche Identität (siehe „Zugang & Anmeldung" im Bauplan).
+
+### Was funktioniert: `resource: search`
+
+```jsonc
+{ "resource": "search", "type": "Gastro", "experience": "572",
+  "schema": { "value": "gl:Default" }, "q": "", "limit": 3 }
+```
+
+Und das Suchschema liefert **genau die Metadaten, die wir mühsam aus dem xlsx-Export geholt
+haben**:
+
+| Feld | Bedeutung |
+|---|---|
+| `_ObjectId` / `GastroId` | Datensatz-ID — **identisch**, gleiche Nummerierung wie die Lese-API |
+| `LastChange` / `LastChangeByUser` | letzte Änderung **und wer sie gemacht hat** |
+| `Created` / `CreatedByUser` | Anlage und Ersteller |
+| `_InExperience` | ist das Objekt der Experience zugewiesen? |
+| `OBJECT_CONTACT_EMAIL`, `Telefon`, `Ort`, `PLZ`, `Strasse`, `_PagesUrl` | Kontakt und Adresse |
+| `HasRecs`, `HasKitchenRecs` | hat der Datensatz Öffnungs- bzw. Küchenzeiten? |
+
+→ **Der Excel-Export ist damit ersetzbar.** `zustaendige.js` kann später durch einen
+Suchaufruf ersetzt werden; die Zwischenlösung bleibt gültig, ist aber nicht mehr nötig, sobald
+die Suche im Workflow steht. `HasRecs` ist zusätzlich ein billiger Vorfilter für Priorität 1.
+
+**Öffnungszeit-Felder sind im Suchschema nicht enthalten** — die liegen im quickedit-Schema.
+
+### Drei Fallstricke bei `q`
+
+1. **Keine Wildcards bei Gastro.** `_Name:*Bärenstein*` scheitert mit *„Ein CONTAINS- oder
+   FREETEXT-Prädikat kann für das Objekt Gastro nicht verwendet werden, da keine
+   Volltextindizierung vorliegt."* Bei `Poi` geht es (der Referenz-Workflow nutzt genau das).
+2. **`_Id` existiert nicht** — *„Unbekanntes Suchfeld:_Id"*. Der Feldname ist `_ObjectId`
+   bzw. `GastroId`.
+3. **Suche nach ID hat trotzdem nichts geliefert** — auch `_ObjectId:<bekannte ID aus dem
+   Ergebnis>` ergab 0 Treffer, ohne Fehler. Die richtige Schreibweise für einen Gleichheits-
+   Vergleich ist noch offen. Praktischer Ausweg: ohne `q` über `limit`/`offset` blättern und
+   lokal filtern — genau das tut `OZ-1` bereits.
+
+### `experience` filtert bei `gl:*`-Schemas nicht
+
+Die drei in der Instanz vorkommenden Nummern (`572`, `20844`, `18738`) liefern für
+`type: Gastro` **dieselben** Datensätze — und zwar Harz-Betriebe (Bad Harzburg), nicht
+Teutoburger Wald. Das deckt sich mit der Sticky Note im Referenz-Workflow: *„Um nicht nur der
+Experience zugewiesene Objekte zu erhalten eins der `gl:*` Search Schemas verwenden."* Für eine
+auf teutoburgerwald begrenzte Suche braucht es ein **nicht-`gl:`-Schema** und die richtige
+Experience-Nummer — oder man filtert über `_InExperience`.
+
+### 🔴 Was blockiert: `resource: quickedit`
+
+```
+Authorization failed - please check your credentials
+```
+
+Bei **allen drei** Schemas (`minimal`, `gl:Default`, `open-data-nrw`), mit demselben Credential,
+mit dem die Suche funktioniert. Es ist also kein Konfigurationsfehler im Node, sondern eine
+**Rechtefrage**.
+
+### Was jetzt gebraucht wird
+
+1. **quickedit-Recht** für den ausführenden Account auf `type: Gastro` — bevorzugt für einen
+   technischen Benutzer, nicht für ein persönliches SSO-Konto.
+2. **Ein quickedit-Schema, das die Öffnungszeit-Felder freigibt.** Erst danach lässt sich der
+   Feldname ermitteln (quickedit-GET ohne „Select Fields" listet die Spalten).
+3. *(nicht blockierend)* Die `experience`-Nummer für `teutoburgerwald` und die korrekte
+   `q`-Schreibweise für einen ID-Vergleich.
+
+Bis dahin bleibt `oz-schreiben` der austauschbare Baustein: `OZ-1` erzeugt die geprüfte
+Arbeitsliste, die Übernahme geschieht bis zur Freigabe über die Oberfläche.
+
+### Nachtrag: `experience` für teutoburgerwald ist **18395** (01.09.2026)
+
+Damit erneut geprüft — quickedit bleibt gesperrt:
+
+| Versuch | Ergebnis |
+|---|---|
+| `quickedit`, experience **18395**, schema `minimal` | 🔴 `Authorization failed - please check your credentials` |
+| `quickedit`, experience **18395**, schema `open-data-nrw` | 🔴 `Authorization failed` |
+| `quickedit`, experience 572, alle drei Schemas | 🔴 `Authorization failed` |
+| `search`, experience 18395, schema `gl:Default` | ✅ funktioniert |
+
+**Der Befund ist damit doppelt belegt und nicht experience-abhängig: dem Konto
+„id.destination.one SSO account 38" fehlt das quickedit-Recht.** Das ist keine Frage der
+Konfiguration im Node und auch nicht der Experience-Nummer — es braucht eine Rechtevergabe.
+
+### Weitere Erkenntnisse zur Abfragesprache
+
+- **`minimal` und `open-data-nrw` sind quickedit-Schemas, keine Such-Schemas.** In der Suche
+  eingesetzt: `XsdSearchSchema configuration error: no search:config element found`. Die
+  Schema-Auswahl ist im Node dieselbe Liste, die beiden Ressourcen brauchen aber
+  unterschiedliche Schema-Typen.
+- **`_InExperience` ist ein Integer, kein Boolean.** `_InExperience:true` →
+  `Fehler beim Konvertieren des nvarchar-Werts "true" in den int-Datentyp`.
+- **`_InExperience:1` liefert dennoch 0 Treffer**, ebenso `GastroId:<id>` und
+  `_ObjectId:<id>` — die Gleichheits-Schreibweise der Abfragesprache ist weiter unklar. Eine
+  auf teutoburgerwald begrenzte Suche gelang nicht; `gl:Default` liefert unabhängig von der
+  `experience` immer denselben globalen Bestand (in der Stichprobe Harz-Betriebe).
+
+**Für `OZ-1` ist das ohne Belang:** der Prüflauf liest über die öffentliche
+meta-Schnittstelle, und die ist über `experience=teutoburgerwald` bereits richtig begrenzt.
+Relevant wäre die Suche nur, um den Excel-Export durch einen Live-Aufruf zu ersetzen
+(`LastChangeByUser` & Co.) — ein Komfortgewinn, kein Blocker.
+
+---
+
+## Der Ad-hoc-Bearbeitungslink — der Weg um die fehlenden Rechte herum
+
+destination.data kann pro Datensatz einen **zeitlich begrenzten Bearbeitungslink** erzeugen und
+per Mail verschicken:
+
+```
+https://data.destination.one/OpenObject.aspx?ah=<Token>
+```
+
+Aus der Beispielmail: *„Es steht ein Bearbeitungslink für Gastro Eiscafé Venezia für die
+Experience Teutoburger Wald bereit … erstellt von … und ist bis 15.09.2026 verwendbar."* Also
+rund **zwei Wochen** gültig, an einen Datensatz gebunden, ohne Anmeldung nutzbar.
+
+### Entscheidung: der Link geht an **niemanden** — ein einziger Rückmeldeweg
+
+Zwischenzeitlich war geplant, Ersteller und letztem Bearbeiter den Link mitzuschicken (sie kennen
+destination.data ja). **Verworfen**, aus drei Gründen:
+
+1. **Ein Token im Browser.** Stünde der Link im Fragebogen, müsste der Webhook ihn an den Browser
+   ausliefern — dann liegt er im Netzwerk-Tab, auch wenn die Seite ihn nicht anzeigt.
+2. **Zwei Wege, zwei Wahrheiten.** Wer direkt in der Oberfläche editiert, umgeht die
+   Plausibilitätsprüfung und die Nachvollziehbarkeit. Der Fragebogen protokolliert, wer was
+   bestätigt hat; ein Direkt-Edit nicht.
+3. **Es ist kein Fortschritt.** Der Link muss ohnehin **von Hand pro Datensatz** erzeugt werden.
+   Bei 621 Fällen ist das keine Automatisierung.
+
+**Alle** Rückmeldungen laufen deshalb über den Fragebogen — Gastronom und Touristiker:innen
+gleichermaßen. Ein Weg, eine Prüfung, ein Protokoll, kein Token im Browser.
+
+Der Ad-hoc-Link bleibt damit ein **manueller Notweg für Einzelfälle**, nicht Teil des Ablaufs.
+
+### ⚠️ Der Link ist selbst ein Zugangsmittel
+
+Wer ihn hat, darf den Datensatz ändern — bis zum Ablaufdatum, ohne Anmeldung. Folgen für den Bau:
+
+- **Nie in einer URL** (kein Query-Parameter), nie in einer Fehlermeldung, nie im Log
+- **Nur an die hinterlegte Adresse** schicken, nicht an eine aus einer Antwort übernommene
+- **Erst beim Versand erzeugen**, nicht im Prüflauf auf Vorrat — sonst ist er abgelaufen, bevor
+  die Mail rausgeht. Die Fragebogen-Frist (7 Tage) liegt bewusst innerhalb der Gültigkeit
+- In `oz_faelle` stehen dafür `bearbeitungslink` und `bearbeitungslink_gueltig_bis`; `OZ-1`
+  lässt beide **leer**
+- Auf der Fragebogen-Seite steht ein Hinweis „bitte nicht weitergeben" direkt am Link
+
+### Umgesetzt
+
+- `oz_faelle` neu angelegt mit `bearbeitungslink` und `bearbeitungslink_gueltig_bis`
+  (ID **`ZqtInTqjOEJBFtba`**). Die Spalten bleiben — aber nur für die **interne**
+  Änderungsliste der Redaktion, nie für den Fragebogen-Webhook.
+- Im Frontend gibt es das Feld **gar nicht mehr**: kein `bearbeitungslink` im Typ `FallDaten`,
+  keine Anzeige. Geprüft — `OpenObject.aspx` kommt im ausgelieferten HTML nicht vor.
+- `/fragebogen?token=demo&rolle=gastronom` bleibt als Schalter, um die rollenabhängige Anrede
+  zu zeigen.
+- Die Sticky Notes stehen jetzt im Bau-Skript, nicht nur in der Instanz
+
+### Offen
+
+**Lässt sich der Link programmatisch erzeugen?** In der Oberfläche geht es per JavaScript pro
+Datensatz. Für `OZ-3` wäre nötig: ein Aufruf, der für eine Datensatz-ID einen Link zurückgibt
+(oder ihn direkt an eine Adresse schickt). Ist das nur ein Knopf in der Oberfläche, bleibt der
+Schritt manuell — dann liefert die Arbeitsliste die Reihenfolge und den Direktlink, und die
+Redaktion erzeugt die Links selbst.
+
+---
+
+## `OZ-2 Antwort` — gebaut und Ende-zu-Ende geprüft (01.09.2026)
+
+Workflow-ID **`XwJ1UamqGydGsJjE`**, 15 Nodes + 3 Sticky Notes, **aktiv** (die Webhooks müssen
+erreichbar sein). Erzeugt aus [oz-logik/baue-oz2-workflow.js](../oz-logik/baue-oz2-workflow.js).
+
+```
+GET  /webhook/oz-fragebogen          → liefert den Fall zu einem Token
+POST /webhook/oz-fragebogen-antwort  → nimmt die Rückmeldung entgegen
+```
+
+### Geprüfte Fälle
+
+| Fall | Ergebnis |
+|---|---|
+| Laden mit gültigem, offenem Token | ✅ Betrieb, Ort, beide Fassungen, Frist, Rolle |
+| Laden mit bereits beantwortetem Token | ✅ `status: beantwortet` |
+| Laden mit erfundenem Token | ✅ nur `{ status: "unbekannt" }` |
+| Laden ohne Token | ✅ nur `{ status: "unbekannt" }` |
+| Antwort mit unmöglichen Zeiten (`22:00–22:00`) | ✅ abgelehnt, mit Begründung — **Token bleibt gültig** |
+| Derselbe Token, korrigierte Eingabe | ✅ angenommen |
+| Derselbe Token zum dritten Mal | ✅ verbraucht, abgelehnt |
+| Anderer Token, Fassung angekreuzt | ✅ gespeichert |
+| Erfundener Token | ✅ abgelehnt |
+| **Ende-zu-Ende über die echte Seite** | ✅ Browser → Webhook → Data Table, `auswahl: "B"` |
+
+Dass eine **abgelehnte Eingabe den Token nicht verbraucht**, ist Absicht: die Person soll
+korrigieren können, statt aus dem Vorgang zu fallen.
+
+### Was gespeichert wird
+
+Freie Eingaben werden **normalisiert** abgelegt — in derselben Schreibweise wie `variante_a/b/c`,
+damit `OZ-3` sie direkt vergleichen kann:
+
+```
+Mo geschlossen · Di 09:00–12:00, 14:00–18:00 · Mi unbekannt · Do unbekannt
+· Fr 20:00–02:00 (Folgetag) · Sa unbekannt · So unbekannt
+```
+
+### Eine Regel, eine Fassung
+
+`pruefeEingabe()` in [normalisieren.js](../oz-logik/normalisieren.js) ist **verbindlich**; der
+gleichlautende Check in `frontend-starter/app/fragebogen/typen.ts` dient nur der sofortigen
+Rückmeldung im Browser. Wer die Regeln ändert, ändert sie in `normalisieren.js`.
+
+Dazu neu: `wocheAusText()` als Umkehrung von `wocheAlsText()` — die Data Table speichert die
+Fassungen als lesbaren Text für die Redaktion, die Seite braucht sie pro Wochentag. Beide
+Richtungen stehen in derselben Datei und können nicht auseinanderlaufen.
+
+### Security-Check: 9/9
+
+Kein Key in Parametern, keine Credentials nötig, kein Bearbeitungslink in der Antwort, keine
+echten Adressen, Fehlerantwort ohne Details, Token-Prüfung auf `status = offen`, Token-Suche auf
+`limit 1` begrenzt.
+
+Die Webhooks sind **öffentlich erreichbar** — das ist so gewollt und wird über die
+Einmal-Tokens abgesichert. Ohne gültiges Token gibt es keinerlei Auskunft.
+
+### Testdaten in der Instanz
+
+`oz_faelle` (**`ZqtInTqjOEJBFtba`**) enthält zwei echte Fälle: `100022794` Café Hölter (Prio 2,
+Widerspruch) und `100040904` Waldhotel Bärenstein (Prio 1, Direkt-Vorschlag). In `oz_antworten`
+liegen vier Tokens, alle mit Platzhalter-Adressen `@example.invalid`.
+
+Die drei Antworten zu Café Hölter widersprechen sich (`eigene` / `B` / `A`) — brauchbares
+Material für die Entscheidungslogik in `OZ-3`.
+
+---
+
+## `OZ-3 Entscheiden & Abschließen` — gebaut und an 8 Szenarien geprüft (01.09.2026)
+
+Workflow-ID **`lRQBhtog2no1SeHz`**, 7 Nodes + 3 Sticky Notes, **inaktiv** (läuft nicht von
+selbst). Erzeugt aus [oz-logik/baue-oz3-workflow.js](../oz-logik/baue-oz3-workflow.js).
+
+Liest `oz_faelle` und `oz_antworten`, entscheidet nach Konsens-Regeln, schreibt nach
+`oz_ergebnisse` und setzt den Endstatus im Fall.
+
+### Warum hier Text gegen Text verglichen wird
+
+`OZ-2` legt **jede** Rückmeldung in derselben Schreibweise ab wie die Fassungen aus der Datenbank
+(`Mo geschlossen · Di 08:00–18:30 · …`) — auch eine freie Eingabe wird vorher normalisiert. Zwei
+gleiche Aussagen ergeben deshalb denselben Text, und der Konsens lässt sich durch Gruppieren
+feststellen, ohne die Zeiten erneut zu parsen. Der Code-Node braucht die
+Normalisierungs-Bibliothek gar nicht.
+
+### Alle Entscheidungsregeln geprüft
+
+| Szenario | Konfidenz | Endstatus | |
+|---|---|---|---|
+| alle Beteiligten einig | hoch | `entschieden` | ✅ |
+| 2 von 3 geantwortet, einig | mittel | `entschieden` | ✅ |
+| Widerspruch, Gastronom dabei → **Gastronom gewinnt** | mittel | `entschieden` | ✅ |
+| Widerspruch ohne Gastronom, Mehrheit | mittel | `entschieden` | ✅ |
+| Widerspruch ohne Gastronom, Patt | keine | `eskalation` | ✅ |
+| niemand geantwortet, Frist abgelaufen | keine | `unbeantwortet` | ✅ |
+| Konsens bestätigt den bestehenden Eintrag | hoch | `bestaetigt` | ✅ |
+| **mehrere Rückmeldungen aus dem Betrieb widersprechen sich** | keine | `eskalation` | ✅ |
+
+Die letzte Regel ist beim Testen entstanden: durch den Ende-zu-Ende-Test lagen zwei
+Gastronomen-Antworten für Café Hölter vor, die sich widersprachen — und der Code nahm still die
+erste. Jetzt eskaliert er stattdessen. Ohne den Testlauf wäre das nicht aufgefallen.
+
+Zwei weitere „Fehlschläge" beim Prüfen waren **Fehler im Testaufbau**, nicht im Code: die
+Antworten wählten die Fassung, die schon in der Datenbank stand — also griff korrekt die Regel
+„bestätigt den bestehenden Eintrag". Erst mit einer abweichenden Fassung zeigten sich „2 von 3"
+und „Mehrheit" als eigenständige Ergebnisse.
+
+### Zwei bewusste Zurückhaltungen
+
+- **Solange die Frist läuft und Rückmeldungen fehlen, wird nicht entschieden.** Der Fall bleibt
+  liegen und kommt beim nächsten Lauf wieder.
+- **Kein Dauer-Nachfassen.** Antwortet niemand, gibt es eine Erinnerung — danach Status
+  `unbeantwortet` und Ruhe. Sonst wird der Ablauf zum Spam-Absender.
+
+### Endstatus im Fall
+
+`entschieden` · `bestaetigt` (Daten waren richtig, nichts zu ändern) · `eskalation` (ein Mensch
+muss ran) · `unbeantwortet`
+
+### Security-Check
+
+Inaktiv, kein Webhook (Testzugang wieder entfernt), keine Credentials, **kein Node der nach außen
+schreiben könnte** (nur `manualTrigger`, `scheduleTrigger`, `dataTable`, `code`), Schreibziele
+ausschließlich die drei eigenen Tabellen, `geschrieben` steht immer auf `false` — geschrieben wird
+erst durch `oz-schreiben`, sobald die quickedit-Rechte da sind.
+
+### Aufgeräumt
+
+Die 7 synthetischen Testfälle (`900001`–`900007`) und ihre 19 Antwortzeilen sind aus allen drei
+Tabellen **gelöscht** — vorher mit `dryRun` geprüft, dass der Filter genau sie trifft und nichts
+sonst. Erfundene Datensatz-IDs dürfen nicht liegen bleiben: ein späterer Schreibvorgang würde
+sonst versuchen, Datensatz `900001` in destination.data zu ändern.
+
+---
+
+## Mailversand — gebaut, aber sicher stillgelegt (01.09.2026)
+
+`OZ-1` hat jetzt eine Mail-Strecke. Sie erzeugt Zugänge und den Mailtext, **verschickt aber
+nichts**: der Send-Email-Node ist deaktiviert und der Testmodus ist an.
+
+```
+Fall speichern → Zuständige lesen → Empfänger bestimmen → Token erzeugen
+              → Mailtext bauen → Zugang anlegen → Anfrage senden (deaktiviert)
+```
+
+### Der Token kommt aus dem Crypto-Node, nicht aus dem Code
+
+Im n8n Code Node ist **`crypto.randomUUID` nicht verfügbar** — geprüft, indem der Token je nach
+Verfahren mit `a` oder `b` beginnt: er begann mit `b`, also griff der Rückfall auf `Math.random`.
+Das ist zu wenig: `Math.random` ist vorhersagbar, und der Token ist der einzige Schutz des
+Fragebogens.
+
+Erzeugt wird er deshalb vom Node **`n8n-nodes-base.crypto`** mit
+`{action: 'generate', encodingType: 'uuid', dataPropertyName: 'token'}`. Geprüft: 70 von 70
+Tokens sind 32-stellige Hex-UUIDs, alle verschieden.
+
+Weil der Token erst danach existiert, ist der Code in zwei Nodes geteilt: `Empfänger bestimmen`
+(wer bekommt Post) und `Mailtext bauen` (Text mit Link).
+
+### 🔴 Der Befund, der den Testmodus erzwungen hat
+
+Beim ersten Probelauf entstanden 70 Zugänge — und **63 der Empfängeradressen waren echt**
+(`schiedersee.de`, `parkhotel-hegers.de`, `hotel-aspethera.de` …). Die Gastronomen-Adressen kommen
+live aus dem Feld `email` der Schnittstelle, sind also echte Betriebsadressen.
+
+Es ging nichts raus, weil der Mail-Node deaktiviert war. Aber der Versand an 63 echte Betriebe
+hing damit an **einem Häkchen**. Deshalb jetzt zweistufig:
+
+```js
+const TESTMODUS = true;                                  // Standard: an
+const TEST_EMPFAENGER = 'test-empfaenger@example.invalid';
+```
+
+Solange `TESTMODUS` an ist, wird **jede** Empfängeradresse ersetzt; die echte steht nur im
+Datenfluss (`echter_empfaenger`) und wird nirgends angeschrieben. Nachgeprüft: nach der Umstellung
+gingen 0 von 70 Zugängen auf eine echte Domain.
+
+### Vor dem ersten echten Versand — drei Dinge
+
+1. `FRAGEBOGEN_BASIS` auf die veröffentlichte Adresse setzen (steht auf einem Platzhalter)
+2. `ABSENDER` setzen und eine **SMTP-Credential** hinterlegen
+3. `TESTMODUS = false` **und** den Node `Anfrage senden` aktivieren
+
+### Der Mailtext
+
+```
+Betreff: Stimmen die Öffnungszeiten von Café Hölter?
+
+Guten Tag,
+
+für Café Hölter in Salzkotten liegen uns unterschiedliche Öffnungszeiten vor.
+Sie kennen Ihren Betrieb am besten.
+
+So sieht der Eintrag gerade für Gäste aus:
+https://www.teutonavigator.de/…/g_100022794/caf-hoelter
+
+Bitte bestätigen Sie mit einem Klick, welche Angabe stimmt:
+https://…/fragebogen?token=…
+
+Das dauert weniger als eine Minute. Wir warten bis zum 08.09.2026.
+
+Vielen Dank für Ihre Hilfe
+Teutoburger Wald Tourismus
+
+--
+Sie bekommen diese Nachricht, weil Ihre Adresse zu diesem Eintrag in
+destination.data hinterlegt ist. Der Link oben gilt nur für Sie und nur einmal.
+```
+
+Rollenabhängig ist nur ein Satz (`Sie kennen Ihren Betrieb am besten.` /
+`… zuletzt bearbeitet.` / `… angelegt.`). Bei leeren Öffnungszeiten kommt eine Zeile dazu:
+*„Dort steht derzeit »immer geöffnet« — weil keine Öffnungszeiten hinterlegt sind."*
+
+**Kein Bearbeitungslink in der Mail** — alle antworten über den Fragebogen.
+
+Beim Bauen fiel dabei ein Fehler auf: ein `filter(zeile => zeile !== '')` hat **alle** Leerzeilen
+entfernt, die Mail war ein dichter Block. Jetzt markiert `null` die bedingte Zeile, `''` bleibt
+Leerzeile. Der Text lässt sich ohne n8n und ohne Versand prüfen — der lokale Renderer im
+Scratchpad zeigt ihn genau so, wie er rausgehen würde.
+
+### Messwerte des Probelaufs
+
+| | |
+|---|---:|
+| Fälle angelegt | 40 |
+| Zugänge angelegt | 70 |
+| davon Anfrage-Fälle | 37 |
+| Direkt-Vorschläge (**keine** Mail) | 3 |
+| Empfänger: Gastronom / Redaktion / Bearbeiter | 33 / 30 / 7 |
+
+Dass die Redaktion 30-mal auftaucht, liegt an `oz_zustaendige`: dort stehen nur die 34
+Priorität-1-Fälle. Für alle anderen fällt keine zuständige Person an, und die Anfrage geht an die
+Region — genau die vorgesehene Rückfallregel.

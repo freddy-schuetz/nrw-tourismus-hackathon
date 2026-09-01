@@ -38,8 +38,19 @@ export type FallDaten = {
      */
     gaesteStatus?: string;
   };
-  /** Rolle der angeschriebenen Person — nur zur Anrede. */
+  /** Rolle der angeschriebenen Person — steuert nur die Anrede. */
   rolle?: "gastronom" | "ersteller" | "bearbeiter";
+
+  // ⚠️ Hier steht bewusst KEIN Ad-hoc-Bearbeitungslink.
+  //
+  // Ein solcher Link (`data.destination.one/OpenObject.aspx?ah=…`) ist ein
+  // Zugangsmittel: wer ihn hat, darf den Datensatz ohne Anmeldung ändern.
+  // Stünde er in diesem Typ, müsste der Webhook ihn an den Browser ausliefern —
+  // und dann liegt er im Netzwerk-Tab, selbst wenn die Seite ihn nicht anzeigt.
+  //
+  // Alle Rückmeldungen laufen deshalb über diesen Fragebogen, auch die der
+  // Touristiker:innen. Ein einziger Weg heißt: eine Plausibilitätsprüfung, eine
+  // Nachvollziehbarkeit, kein Token im Browser.
   frist?: string;
   varianten: Variante[];
   /** Küchenzeiten sind KEINE Öffnungszeiten, werden aber als Hinweis angezeigt. */

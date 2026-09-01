@@ -21,7 +21,9 @@ const ANREDE: Record<string, string> = {
 
 export default function FragebogenClient() {
   const router = useRouter();
-  const token = useSearchParams().get("token") ?? "";
+  const parameter = useSearchParams();
+  const token = parameter.get("token") ?? "";
+  const demoRolle = parameter.get("rolle") as FallDaten["rolle"] | null;
 
   const [fall, setFall] = useState<FallDaten | null>(null);
   const [ladeFehler, setLadeFehler] = useState<string | null>(null);
@@ -36,14 +38,16 @@ export default function FragebogenClient() {
       return;
     }
     // Vorschau ohne laufendes n8n: /fragebogen?token=demo
+    // Mit &rolle=gastronom lässt sich die Gastronomen-Sicht zeigen — dort fehlt
+    // der Bearbeitungslink absichtlich.
     if (token === "demo") {
-      setFall(DEMO_FALL);
+      setFall(demoRolle ? { ...DEMO_FALL, rolle: demoRolle } : DEMO_FALL);
       return;
     }
     getWebhook<FallDaten>("oz-fragebogen", { token })
       .then(setFall)
       .catch((e) => setLadeFehler(e instanceof Error ? e.message : String(e)));
-  }, [token]);
+  }, [token, demoRolle]);
 
   function setzeZeit(tag: Wochentag, index: number, feld: "von" | "bis", wert: string) {
     setEigene((alt) => {

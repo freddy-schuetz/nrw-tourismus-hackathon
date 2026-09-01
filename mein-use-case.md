@@ -57,6 +57,16 @@ Anfrage-Mail) · *(Stufe 2)* Google Places API
 zu antworten. Gebaut aus `global_id`, siehe `oeffentlicherLink()` in
 [oz-logik/normalisieren.js](oz-logik/normalisieren.js).
 
+**Ein einziger Rückmeldeweg für alle.** Gastronom und Touristiker:innen bekommen dieselbe
+Fragebogen-Seite. Der Ad-hoc-Bearbeitungslink aus destination.data
+(`OpenObject.aspx?ah=…`) wird **niemandem** mitgeschickt:
+
+- er ist ein Zugangsmittel — im Fragebogen müsste ihn der Webhook an den Browser ausliefern
+- wer direkt in der Oberfläche editiert, umgeht Plausibilitätsprüfung und Protokoll
+- er muss ohnehin von Hand pro Datensatz erzeugt werden — bei 621 Fällen keine Automatisierung
+
+Er bleibt ein **manueller Notweg für Einzelfälle**, nicht Teil des Ablaufs.
+
 **Ergebnis:** Korrigierte `timeIntervals` in destination.data, plus nachvollziehbar wer wann was
 bestätigt hat.
 

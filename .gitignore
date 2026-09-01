@@ -32,3 +32,6 @@ PAGES-PrintOnDemand_*.xlsx
 # Maschinenspezifisch / generiert
 .claude/launch.json
 *.tsbuildinfo
+
+# Event-Passwort für den buildbar-Deploy — nie ins Repo
+.event-passwort
