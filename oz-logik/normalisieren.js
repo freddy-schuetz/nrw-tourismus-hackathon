@@ -428,7 +428,9 @@ function alsText(tagObj) {
     .map(([v, b]) => {
       if (tagObj.offenesEnde && b === 1440) return 'ab ' + hhmm(v);
       // Über Mitternacht sichtbar machen, sonst liest man "14:00–11:00" als Fehler.
-      return hhmm(v) + '–' + hhmm(b) + (b > 1440 ? ' (Folgetag)' : '');
+      // Auch Mitternacht selbst gehört dazu: "07:00–00:00" liest sich sonst wie
+      // ein Tippfehler oder gar wie "geschlossen".
+      return hhmm(v) + '–' + hhmm(b) + (b >= 1440 ? ' (Folgetag)' : '');
     })
     .join(', ');
 }
@@ -464,6 +466,54 @@ function wocheAusText(text) {
     if (tag) map[tag] = m[2];
   }
   return map;
+}
+
+/**
+ * Echte Umkehrung von wocheAlsText(): Text → Wochenformat mit Minuten.
+ *
+ * ⚠️ Nicht mit wocheAusText() verwechseln — das liefert nur Anzeigetext pro Tag
+ * und ist für vergleiche() unbrauchbar (dort fehlt status/iv, und dann gilt
+ * jeder Tag als Abweichung).
+ *
+ * Gebraucht, wenn eine Fassung nur noch als gespeicherter Text vorliegt — etwa
+ * in `variante_a`, nachdem der Datensatz selbst längst aus dem Ablauf ist.
+ * Verstanden wird genau, was alsText() erzeugt: "unbekannt", "geschlossen",
+ * "durchgehend offen", "ab 18:00", "11:00–14:00, 17:00–22:00 (Folgetag)".
+ */
+function wocheAusFassung(text) {
+  const woche = UNBEKANNT();
+  for (const [tag, roh] of Object.entries(wocheAusText(text))) {
+    const wert = String(roh).trim();
+    if (wert === 'unbekannt') continue;
+    if (wert === 'geschlossen') { woche[tag].status = 'geschlossen'; continue; }
+    if (wert === 'durchgehend offen') {
+      woche[tag].status = 'offen';
+      woche[tag].iv = [[0, 1440]];
+      continue;
+    }
+
+    const abIst = /^ab\s+(\d{1,2}:\d{2})$/.exec(wert);
+    if (abIst) {
+      const von = zeitZuMinuten(abIst[1]);
+      if (von === null) continue;
+      woche[tag].status = 'offen';
+      woche[tag].iv = [[von, 1440]];
+      woche[tag].offenesEnde = true;
+      continue;
+    }
+
+    for (const spanne of wert.split(',')) {
+      // "17:00–02:00 (Folgetag)" — der Zusatz ist nur Lesehilfe; ergaenze()
+      // rechnet das Überschreiten von Mitternacht selbst aus.
+      const m = /(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/.exec(spanne);
+      if (!m) continue;
+      const von = zeitZuMinuten(m[1]);
+      const bis = zeitZuMinuten(m[2]);
+      if (von === null || bis === null) continue;
+      ergaenze(woche[tag], von, bis === 0 && von !== 0 ? 1440 : bis);
+    }
+  }
+  return woche;
 }
 
 // ---------------------------------------------------------------------------
@@ -613,6 +663,7 @@ module.exports = {
   alsText,
   wocheAlsText,
   wocheAusText,
+  wocheAusFassung,
   zeitZuMinuten,
   tageAusText,
   zeitenAusText,

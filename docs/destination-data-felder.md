@@ -948,19 +948,206 @@ gespart — sie stand sofort im Klartext auf der Seite.)*
 Abhängigkeiten. Die App besteht jetzt aus **vier rein statischen Routen** und braucht zur Laufzeit
 keinen Serverendpunkt.
 
-### 🔴 Offen und aus dem Blick geraten: Quelle C
+### ~~🔴 Offen und aus dem Blick geraten: Quelle C~~ → eingebaut (01.09.2026)
 
-Die Betriebs-Webseiten sind **nicht** im Ablauf. `webseite.js` ist gebaut und an 80 echten Seiten
-gemessen, der KI-Prompt ist an 8 Seiten geprüft — aber in `OZ-1` ist nichts davon eingebaut.
-`variante_c` ist in allen 40 Fällen leer, der Fragebogen zeigt zwei statt drei Fassungen.
+*Ursprünglicher Befund:* Die Betriebs-Webseiten waren **nicht** im Ablauf. `webseite.js` war
+gebaut und an 80 echten Seiten gemessen, der KI-Prompt an 8 Seiten geprüft — aber in `OZ-1` war
+nichts davon eingebaut. `variante_c` war in allen 40 Fällen leer, der Fragebogen zeigte zwei statt
+drei Fassungen. Die Folge wog schwerer als der Prozentsatz vermuten lässt: die **459 Datensätze
+mit Struktur aber ohne eigenen Freitext** waren überhaupt nicht prüfbar.
 
-Die Folge wiegt schwerer als der Prozentsatz vermuten lässt: die **459 Datensätze mit Struktur
-aber ohne eigenen Freitext** sind mit dem heutigen Stand überhaupt nicht prüfbar. Für die ist die
-Webseite die einzige zweite Quelle.
+**Erledigt.** Beide Stufen laufen in `OZ-1`. Was daraus geworden ist, steht unten.
 
-Zum Einbau nötig:
+---
 
-1. HTTP-Request auf `web` je Fall, fehlertolerant (6 % der Seiten sind tot)
-2. `ausJsonLd()` für die 8 % exakten Fälle — sofort machbar, ohne KI
-3. KI-Node mit dem getesteten Prompt für die 61 % Textfälle — braucht ein KI-Credential
-4. `variante_c` füllen und die Selektion um „widerspricht der Webseite" erweitern
+## Quelle C — die Betriebs-Webseite im Ablauf (01.09.2026)
+
+Vier neue Nodes in `OZ-1`, in dieser Reihenfolge:
+
+| Node | Was er tut |
+|---|---|
+| `Webseite holen` | HTTP-Request auf `web`, `responseFormat: text`, Timeout 12 s, 8er-Häppchen, `onError: continueRegularOutput` |
+| `Webseite auswerten` | `ausJsonLd()` → exakte Zeiten; sonst `textKandidaten()` → Abschnitte für die KI |
+| `Webtext vorhanden?` | IF-Node. Nur Datensätze mit Seitentext gehen ans Modell — kein Aufruf, keine Kosten für die anderen |
+| `KI liest den Seitentext` + `Sprachmodell` + `Ausgabeformat` + `KI-Ergebnis prüfen` | Sonnet 5 über `CUSTOM.lmChatOneIntelligence`, Structured Output, danach vier Bremsen |
+
+### Messlauf über alle 1133 Datensätze
+
+| | |
+|---|---|
+| Webseiten abgefragt | 79 |
+| belastbare Fassung aus **schema.org** | 1 |
+| wegen fremdem `@type` verworfen | 4 |
+| nur Fließtext → an die KI | 25 (von 37, Rest durch `MAX_KI` gebremst) |
+| kein Fund auf der Seite | 36 |
+| Seite nicht erreichbar | 5 |
+
+Ergebnis der KI-Stufe, zweimal identisch reproduziert:
+
+```
+gefragt 25 · ableitbar 19 · nicht ableitbar 6
+ki_fehler 0 · erfundene_zeit 0 · unplausibel 0
+→ 9 neue Fälle · 6 dritte Fassungen · 4 bestätigt · 5 verworfen
+```
+
+**Alle 9 neuen Fälle von Hand gegengelesen: 9 von 9 sind echte Widersprüche.** Keine erfundene
+Zeit, keine verwechselten Küchenzeiten, keine vertauschten Wochentage.
+
+### Der Typfilter war nötig, nicht optional
+
+Ohne ihn lieferte JSON-LD 6 Treffer, davon 3 mit `Mo–Sa 09:00–17:00` — das sind Hotel-Rezeptions-
+bzw. Büro-Zeiten aus `LodgingBusiness`- und `LocalBusiness`-Knoten, nicht die Öffnungszeiten des
+Lokals. `GASTRO_TYP` / `NICHT_GASTRO_TYP` in `webseite.js` filtern das weg: 6 → 1 Treffer, und der
+eine ist echt.
+
+Merksatz: **Ein JSON-LD-Fund ohne Typprüfung ist keine Quelle, sondern ein Zufall.**
+
+### Vier Bremsen zwischen KI-Antwort und Fragebogen
+
+Die KI liest, sie entscheidet nicht. `KI-Ergebnis prüfen` verwirft eine Fassung, wenn:
+
+1. **`ableitbar=false`** — die KI sagt selbst, dass der Text nichts hergibt (6 von 25 Fällen:
+   „auf Anfrage", mehrere Saisons, widersprüchliche Blöcke mehrerer Betriebe an einer Adresse)
+2. **Zeit-Gegenprobe** — jede genannte Uhrzeit muss im Seitentext vorkommen. Großzügig geprüft
+   („17", „17:00", „17.00", „17 Uhr" gelten alle), aber eine erfundene 19:30 fällt auf. Das ist
+   die wirksamste Bremse und braucht keine zweite KI.
+3. **kein einziger Tag belegt** — eine leere Woche ist keine Aussage
+4. **`auffaelligkeiten()`** — 24/7, Öffnung vor 05:00, mehr als 4 Ruhetage
+
+Dazu die Zuordnungsprüfung: kommen aus dem Modell nicht genau so viele Antworten wie Fragen
+gestellt wurden, wird **gar nichts** übernommen. Sonst landen Öffnungszeiten beim falschen Betrieb.
+
+### Drei Fehler, die der Bau gekostet hat
+
+**1. Der Ausgabe-Parser braucht sein eigenes Modell.** Mit `autoFix: true` erwartet
+`outputParserStructured` eine **eigene** `ai_languageModel`-Verbindung — sonst scheitert jeder
+Aufruf mit „A Model sub-node must be connected and enabled". Das Modell muss also an *zwei*
+Stellen hängen: an der Kette und am Parser. Die Bremsen haben den Fehler sauber abgefangen (alle
+25 als `ki_fehler`, keine falschen Daten), aber gelaufen ist nichts.
+
+**2. Offenes Ende gilt für die letzte Spanne, nicht für den Tag.** Das Schema hat
+`offenesEnde` pro Tag. Bei *Restaurant Alte Schule* („Di–Sa 11:30–14:00 **und ab** 18:00")
+lieferte die KI korrekt zwei Spannen und setzte das Kennzeichen für den Tag. Mein Code hat es auf
+**beide** Spannen angewandt → im Fragebogen stand `Di ab 11:30, ab 18:00`. Verlässlich ist die
+Uhrzeit selbst: für ein offenes Ende schreibt die KI laut Prompt `23:59`.
+
+**3. `wocheAusText()` ist kein Parser.** Es liefert Anzeigetext pro Tag
+(`{Monday: "08:00–18:00"}`) und wird in `OZ-2` für den Fragebogen gebraucht. Ich hatte es
+benutzt, um `variante_a` für `vergleiche()` zurückzulesen — dort fehlt aber `status`/`iv`, und
+dann gilt **jeder** Tag als Abweichung: jeder Web-Kandidat wäre ein Fehlalarm geworden. Neu:
+`wocheAusFassung()` in `normalisieren.js`, die echte Umkehrung von `wocheAlsText()`, mit
+Hin-und-Rück-Test.
+
+### Kosten gebremst
+
+`MAX_KI = 25` begrenzt die Modellaufrufe pro Lauf. Das Budget bekommt zuerst, wer ohne Webseite
+gar nicht prüfbar ist (`weg: 'web-pruefen'`); die schon erkannten Fälle bekommen den Rest, denn
+dort ist die Webseite nur eine dritte Fassung zum Ankreuzen. Ein Lauf dauert damit rund 95 s.
+
+### Woher eine Fassung stammt, steht jetzt dabei
+
+Neue Spalte `variante_c_quelle` in `oz_faelle`:
+
+- `Webseite, maschinenlesbar — schema.org (Restaurant)`
+- `Webseite (Fließtext, von der KI gelesen)`
+
+`OZ-2` gibt das als `hinweis` an den Fragebogen weiter, die Seite zeigt es schon an — am Frontend
+war nichts zu ändern. Wer eine Fassung bestätigt, soll wissen, wie verlässlich sie ist.
+
+### Der Fund, der beim Fragebogen-Test aufgefallen ist
+
+`Fall speichern` hat mit `insert` gearbeitet. Jeder Lauf legte damit **eine weitere Zeile pro
+Datensatz** an — nach sechs Testläufen hatte *Café Breitengrad* sechs Zeilen. `OZ-2` sucht den
+Fall über `datensatz_id` und nimmt den **ersten** Treffer, also die älteste Zeile: der Fragebogen
+zeigte veraltete Fassungen ohne Variante C.
+
+Zwei Änderungen, beide nötig:
+
+- **`Fall speichern` → `upsert`** auf `datensatz_id`. Ein Datensatz, eine Zeile.
+  ⚠️ n8n verlangt dafür **beides**: `filters.conditions` *und* `columns.matchingColumns`. Fehlt
+  eines, lässt sich der Workflow nicht aktivieren („Missing or invalid required parameters:
+  filters").
+- **Neuer erster Node `Bestehende Fälle lesen`.** `Zeiten vergleichen` überspringt jeden
+  Datensatz, dessen Fall noch in Arbeit ist. Überschrieben werden nur `entschieden` und
+  `bestaetigt`; `neu`, `eskalation` und `unbeantwortet` bleiben unangetastet.
+
+**Warum das mehr als Kosmetik ist:** ohne diese Sperre schreibt der wöchentliche Lauf denselben
+Menschen jede Woche dieselbe Mail. Nach der zweiten unnötigen Mail liest niemand mehr die dritte —
+und damit fällt der ganze Ablauf.
+
+### Getestet
+
+`oz-logik/ki-auswertung-test.js` — 33 Prüfungen, ohne n8n und ohne Modellaufruf. Der Code aus dem
+Node `KI-Ergebnis prüfen` wird aus dem Bauskript herausgeholt und mit erfundenen KI-Antworten
+gefüttert. So lassen sich die Fälle prüfen, die im Echtlauf selten sind:
+
+- echter Widerspruch → Fall mit Priorität 2, Tage im Grund, Herkunft dabei
+- erfundene Zeit → kein Fall
+- `ableitbar=false` und Saisonhinweis → kein Fall
+- 24/7 → kein Fall
+- Webseite bestätigt die Datenbank → kein Fall, keine Mail
+- **Schweigen ist kein Widerspruch:** nennt die Seite nur Fr und Sa, stellt das die anderen
+  fünf Tage nicht in Frage
+- Mittagstisch + offener Abend am selben Tag → `11:30–14:00, ab 18:00`
+- kaputte/fehlende KI-Antwort → Web-Kandidat fällt weg, Bestandsfall bleibt erhalten
+- Hin-und-Rück-Test für `wocheAusFassung()` über sieben Fassungsarten
+
+Dazu: `alsText()` schreibt jetzt auch bei Ende genau um Mitternacht „(Folgetag)" —
+`07:00–00:00` (echter Fall: Steigenberger Bielefelder Hof) liest sich sonst wie ein Tippfehler
+oder wie „geschlossen".
+
+### Was die Webseiten über die Datenpflege verraten
+
+Zwei Befunde aus den 9 Fällen, die über Öffnungszeiten hinausgehen:
+
+- **Küchenzeiten stehen als Öffnungszeiten in der Datenbank.** *Essbar im Steigenberger*: in
+  destination.data steht `Mo–Sa 12:30–22:00` — das sind exakt die „Öffnungszeiten der Küche" von
+  der Webseite. Offen ist das Lokal laut eigener Seite `07:00–00:00`.
+- **Frühstückszeiten als Öffnungsbeginn.** *Benni´s Kitchen*: `09:30` in der Datenbank, `11:00`
+  auf der Webseite — und im Feld `KITCHEN_ZEITEN` steht „Frühstück: 09:30-11:30".
+
+Beides sind keine Tippfehler, sondern ein Muster. Der Fragebogen ist dafür genau das richtige
+Werkzeug: der Betrieb sieht beide Fassungen nebeneinander und entscheidet in zehn Sekunden.
+
+### 🔴 Die Instanz dreimal umgebracht — und warum
+
+Nach dem Einbau von `Bestehende Fälle lesen` stürzte die n8n-Instanz **dreimal in Folge** ab
+(`WorkflowCrashedError: possible out-of-memory`), immer nach 67–86 s. Der Weg zur Ursache ist
+lehrreich, weil die erste Vermutung falsch war:
+
+1. **Verdacht Speicher der Webseiten-Abrufe.** 80 Seiten HTML waren 29 MB, die
+   Ausführungsdaten insgesamt 42 MB. Also Seiten-Budget eingebaut und auf 20 Seiten reduziert →
+   **stürzt genauso ab.** Verdacht widerlegt.
+2. **Verdacht Upsert.** Neu seit dem letzten grünen Lauf. In einem Wegwerf-Workflow mit zwei
+   Zeilen isoliert getestet → funktioniert in 526 ms und aktualisiert korrekt die bestehende
+   Zeile. Verdacht widerlegt.
+3. **Die eigentliche Ursache:** `Bestehende Fälle lesen` gibt **eine Zeile pro bestehendem Fall**
+   aus — 265 Items. Der nachfolgende `Gastro-Datensätze holen` lief damit **265-mal**, jedes Mal
+   über alle 1133 Datensätze mit Blättern. Rund 3 GB, die niemand braucht.
+
+**Die Regel dahinter:** Ein n8n-Node läuft **einmal pro Eingabe-Item**. Steht ein Node, der viele
+Zeilen liefert, vor einem Abruf, muss der Abruf `executeOnce: true` haben. Das ist im Editor eine
+Checkbox („Execute Once") und beim Bau über die API ein Feld auf Node-Ebene, nicht in
+`parameters`.
+
+Nachweis: `Bestehende Fälle lesen items=265`, `Gastro-Datensätze holen items=3`. Vorher 265 × 3.
+
+Als Nebenfund fiel dabei auf, dass **alle** Fälle durch den HTTP-Node liefen — auch die ohne
+Webseite und die über dem Budget. Die landeten auf einer Blind-Adresse und warteten je bis zum
+Timeout. Neu davor: der IF-Node `Webseite abrufen?`, dessen „false"-Ausgang direkt zum
+Zusammenführen geht (Merge mit **drei** Eingängen).
+
+### Offen
+
+- **Ein Modellaufruf kann hängen.** In einem Lauf meldete `Sprachmodell` „Request timed out",
+  der Lauf dauerte dadurch 608 statt 95 s. Abgefangen wird das sauber
+  (`onError: continueRegularOutput` → die Fassung fällt weg, es entstehen keine falschen Daten),
+  aber ein Timeout am Modell-Node wäre besser. Die Optionsnamen des Community-Nodes
+  `CUSTOM.lmChatOneIntelligence` sind nicht dokumentiert.
+- **Die restlichen Textseiten** pro Lauf (durch `MAX_KI` gebremst) und die Seiten ohne Fund. Bei
+  letzteren stehen die Zeiten oft in einem Unterseiten-Link (`unterseitenKandidaten()` in
+  `webseite.js` ist gebaut, aber nicht eingehängt).
+- **`oz_faelle` enthält noch die Testzeilen** aus den Läufen vom 01.09. — mehrere pro Datensatz,
+  weil der Upsert erst danach kam. Sie sollten einmal gelöscht werden, sonst überspringt der
+  nächste Lauf 50 Datensätze als „schon in Arbeit".
+- **Google Maps** bleibt Stufe 2 (braucht einen Places-API-Schlüssel mit Abrechnungskonto).

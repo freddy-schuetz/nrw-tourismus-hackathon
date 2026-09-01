@@ -90,7 +90,13 @@ const varianten = [];
 for (const q of QUELLEN) {
   const text = fall[q.spalte];
   if (!text) continue;
-  varianten.push({ key: q.key, quelle: q.quelle, hinweis: q.hinweis, tage: wocheAusText(text) });
+  // Bei Variante C steht in der Datenbank, WIE sie gelesen wurde: maschinenlesbar
+  // aus schema.org oder von der KI aus dem Fließtext. Das gehört in den
+  // Fragebogen — wer eine Fassung bestätigt, soll wissen, woher sie stammt.
+  const hinweis = q.key === 'C' && fall.variante_c_quelle
+    ? 'automatisch gelesen — ' + fall.variante_c_quelle
+    : q.hinweis;
+  varianten.push({ key: q.key, quelle: q.quelle, hinweis, tage: wocheAusText(text) });
 }
 
 const frist = fall.frist
