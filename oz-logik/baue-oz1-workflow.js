@@ -41,6 +41,11 @@ const treiber = `
 const MAX_FAELLE = 40;
 const FRIST_TAGE = 7;
 
+// Wie viele Betriebs-Webseiten pro Lauf abgefragt werden. Jede Abfrage ist ein
+// HTTP-Aufruf nach außen; 6 % der Seiten sind tot und laufen in den Timeout.
+// Bewusst klein gehalten, bis der Ablauf im Echtbetrieb steht.
+const MAX_WEBSEITEN = 40;
+
 // Der HTTP-Node liefert pro Seite ein Item mit einem items-Array.
 const datensaetze = [];
 for (const eingang of $input.all()) {
@@ -68,7 +73,10 @@ const statistik = {
   prio2_widerspruch: 0,
   einig: 0,
   kein_fall: 0,
+  web_kandidaten: 0,
 };
+let webKandidaten = 0;
+let echteFaelle = 0;
 const faelle = [];
 const jetzt = new Date();
 const frist = new Date(jetzt.getTime() + FRIST_TAGE * 24 * 60 * 60 * 1000);
@@ -108,13 +116,32 @@ for (const d of datensaetze) {
     weg = 'anfrage';
     varianteB = wocheAlsText(frei.woche);
     statistik.prio2_widerspruch++;
+  } else if (d.web && /^https?:\\/\\//i.test(d.web) && webKandidaten < MAX_WEBSEITEN) {
+    // Struktur da, aber kein verwertbarer Freitext im Datensatz. Das sind die
+    // rund 459 Fälle, die sich AUS SICH SELBST nicht prüfen lassen — für sie ist
+    // die Betriebs-Webseite die einzige zweite Quelle.
+    //
+    // Hier noch KEIN Fall: erst holt "Webseite holen" die Seite, dann entscheidet
+    // "Webseite auswerten", ob es wirklich eine Abweichung gibt.
+    prio = 3;
+    grund = 'kein eigener Freitext — Webseite prüfen';
+    weg = 'web-pruefen';
+    webKandidaten++;
+    statistik.web_kandidaten++;
   } else {
-    // "auf Anfrage", mehrere Saisons, kein lesbarer Text → bewusst kein Fall.
+    // "auf Anfrage", mehrere Saisons, kein lesbarer Text und keine Webseite
+    // → bewusst kein Fall.
     statistik.kein_fall++;
     continue;
   }
 
-  if (faelle.length >= MAX_FAELLE) continue;
+  // Web-Kandidaten zählen nicht gegen MAX_FAELLE: sie werden meist wieder
+  // verworfen, wenn die Webseite dasselbe sagt. Deshalb ein eigener Zähler —
+  // faelle.length enthält beide Sorten und würde das Budget aufbrauchen.
+  if (weg !== 'web-pruefen') {
+    if (echteFaelle >= MAX_FAELLE) continue;
+    echteFaelle++;
+  }
 
   faelle.push({
     datensatz_id: String(d.id),
@@ -131,6 +158,8 @@ for (const d of datensaetze) {
     // Wird nicht in oz_faelle gespeichert (dort gibt es keine Spalte dafür),
     // sondern von der Empfänger-Ermittlung weiter unten aus diesem Node gelesen.
     betrieb_email: String(d.email || '').trim(),
+    // Für den Webseiten-Abruf im nächsten Node (Quelle C).
+    web: String(d.web || '').trim(),
     // Der Ad-hoc-Bearbeitungslink aus destination.data wird erst beim Versand
     // erzeugt (er läuft nach zwei Wochen ab) und geht NUR an Ersteller bzw.
     // letzten Bearbeiter — für den Gastronomen ist die Datenbank-Oberfläche zu viel.
@@ -148,6 +177,179 @@ return faelle.map((f) => ({ json: { ...f, statistik } }));
 `;
 
 const jsCode = logik + '\n' + treiber;
+
+// --- Quelle C: Betriebs-Webseite ---------------------------------------------
+// webseite.js wird genauso eingesetzt wie normalisieren.js — eine Quelle, keine Kopie.
+const webLogik = (() => {
+  const q = fs.readFileSync(path.join(HIER, 'webseite.js'), 'utf8');
+  const ohneRequire = q.replace(/^const N = require\(['"]\.\/normalisieren['"]\);\s*$/m, '');
+  const i = ohneRequire.indexOf('module.exports');
+  return (i === -1 ? ohneRequire : ohneRequire.slice(0, i)).trimEnd();
+})();
+
+// webseite.js greift über N auf normalisieren.js zu (siehe baue-n8n-bundle.js).
+const BRUECKE = '\nconst N = { TAGE, leereWoche: UNBEKANNT, ergaenze, zeitZuMinuten };\n';
+
+const TREIBER_WEB = `
+// =============================================================================
+// Quelle C — die Betriebs-Webseite auswerten
+//
+// Zwei Wege, siehe webseite.js:
+//   schema.org / JSON-LD  → exakte Zeiten, KEINE KI nötig (in der Stichprobe 8 %)
+//   nur Textabschnitte    → gehen an die KI; dieser Zweig ist noch NICHT gebaut,
+//                           die Abschnitte werden vorerst nur vermerkt (61 %)
+//
+// ⚠️ Kodierungs-Falle, in webseite.js behandelt: 00:00–00:00 heißt bei schema.org
+//    GESCHLOSSEN, in destination.data dagegen 24 STUNDEN OFFEN.
+// =============================================================================
+
+const kandidaten = $('Zeiten vergleichen').all().map((i) => i.json);
+const abrufe = $input.all();
+
+const statistik = {
+  geprueft: 0, json_ld: 0, nur_text: 0, kein_fund: 0, nicht_erreichbar: 0,
+  verworfen_fremder_typ: 0, neue_faelle: 0, bestaetigt: 0,
+};
+
+// Der HTTP-Node liefert ein Item pro Eingabe-Item, in derselben Reihenfolge.
+// Stimmt das nicht, wird die Webseite ignoriert statt falsch zugeordnet.
+const zuordnungOk = abrufe.length === kandidaten.length;
+
+const ergebnis = [];
+
+for (let i = 0; i < kandidaten.length; i++) {
+  const k = { ...kandidaten[i] };
+  // URL zuerst sichern: sie wird gleich aus k entfernt, weil oz_faelle keine
+  // Spalte dafür hat. (Erst löschen und dann k.web prüfen ging schief.)
+  const webUrl = k.web;
+  delete k.web;
+
+  let woche = null;
+  let textAbschnitte = null;
+  let webQuelle = '';
+
+  if (zuordnungOk && webUrl) {
+    statistik.geprueft++;
+    const roh = (abrufe[i] && abrufe[i].json) || {};
+    // responseFormat "text" legt den Seiteninhalt unter data ab.
+    const html = typeof roh === 'string' ? roh : String(roh.data || '');
+    const fehler = roh.error || (!html ? 'leere Antwort' : null);
+
+    if (fehler) {
+      statistik.nicht_erreichbar++;
+    } else {
+      const jsonLd = ausJsonLd(html);
+      if (jsonLd && jsonLd.woche) {
+        statistik.json_ld++;
+        woche = jsonLd.woche;
+        // Woher die Fassung stammt, gehört sichtbar in den Fall: bei einem
+        // "Restaurant"-Knoten ist sie belastbarer als bei einem ohne Typangabe.
+        // Manche Baukasten-Seiten liefern Vorgabewerte wie Mo–So 09:00–17:00 —
+        // die sieht man nur, wenn die Herkunft mitläuft.
+        webQuelle = jsonLd.quelle || '';
+      } else if (jsonLd && jsonLd.verworfen) {
+        // JSON-LD war da, beschrieb aber Hotel oder Organisation, nicht das Lokal.
+        statistik.verworfen_fremder_typ++;
+        const abschnitte = textKandidaten(html);
+        if (abschnitte.length) {
+          statistik.nur_text++;
+          textAbschnitte = kandidatenAlsPrompt(abschnitte).slice(0, 1500);
+        } else {
+          statistik.kein_fund++;
+        }
+      } else {
+        const abschnitte = textKandidaten(html);
+        if (abschnitte.length) {
+          statistik.nur_text++;
+          textAbschnitte = kandidatenAlsPrompt(abschnitte).slice(0, 1500);
+        } else {
+          statistik.kein_fund++;
+        }
+      }
+    }
+  }
+
+  if (woche) k.variante_c = wocheAlsText(woche);
+  if (textAbschnitte) k.webtext = textAbschnitte;
+
+  if (k.weg !== 'web-pruefen') {
+    // Bereits erkannter Fall — die Webseite ist hier nur eine dritte Fassung
+    // zum Ankreuzen, sie ändert nichts an der Einordnung.
+    ergebnis.push({ json: { ...k, statistik_web: statistik } });
+    continue;
+  }
+
+  // Web-Kandidat: nur ein echter Widerspruch macht daraus einen Fall.
+  if (!woche) continue; // ohne exakte Zeiten (noch) keine Entscheidung möglich
+
+  // Beide Fassungen liegen als normalisierter Text vor ("Mo geschlossen · Di …"),
+  // erzeugt von derselben Funktion. Gleicher Text heißt deshalb gleiche Aussage —
+  // ein Vergleich Zeichen für Zeichen genügt hier.
+  const gleich = k.variante_c === k.variante_a;
+
+  if (gleich) {
+    statistik.bestaetigt++;
+    continue;
+  }
+
+  statistik.neue_faelle++;
+  ergebnis.push({
+    json: {
+      ...k,
+      prio: 2,
+      grund: 'widerspricht der Betriebs-Webseite — ' + webQuelle,
+      weg: 'anfrage',
+      statistik_web: statistik,
+    },
+  });
+}
+
+return ergebnis;
+`;
+
+const CODE_WEB = logik + BRUECKE + webLogik + '\n' + TREIBER_WEB;
+
+const WEB_NODES = [
+  {
+    id: 'webholen',
+    name: 'Webseite holen',
+    type: 'n8n-nodes-base.httpRequest',
+    typeVersion: 4.2,
+    position: [360, 90],
+    // Tote Domains, Zertifikatsfehler und Timeouts sind hier normal (6 % in der
+    // Stichprobe). Ein Fehlschlag darf den Lauf nicht abbrechen.
+    onError: 'continueRegularOutput',
+    alwaysOutputData: true,
+    parameters: {
+      url: '={{ $json.web || "https://kein-eintrag.invalid/" }}',
+      options: {
+        response: { response: { responseFormat: 'text', neverError: true } },
+        timeout: 12000,
+        redirect: { redirect: { followRedirects: true, maxRedirects: 5 } },
+        batching: { batch: { batchSize: 8, batchInterval: 300 } },
+      },
+      sendHeaders: true,
+      headerParameters: {
+        parameters: [
+          {
+            name: 'User-Agent',
+            value: 'destination-data-Oeffnungszeiten-Abgleich/0.1 (Datenpflege teutoburgerwald)',
+          },
+          { name: 'Accept', value: 'text/html,application/xhtml+xml' },
+          { name: 'Accept-Language', value: 'de-DE,de;q=0.9' },
+        ],
+      },
+    },
+  },
+  {
+    id: 'webauswerten',
+    name: 'Webseite auswerten',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [600, 90],
+    parameters: { mode: 'runOnceForAllItems', jsCode: CODE_WEB },
+  },
+];
 
 // --- Workflow-Definition -----------------------------------------------------
 const workflow = {
@@ -250,7 +452,9 @@ const workflow = {
     'Manuell starten': { main: [[{ node: 'Gastro-Datensätze holen', type: 'main', index: 0 }]] },
     'Montags früh': { main: [[{ node: 'Gastro-Datensätze holen', type: 'main', index: 0 }]] },
     'Gastro-Datensätze holen': { main: [[{ node: 'Zeiten vergleichen', type: 'main', index: 0 }]] },
-    'Zeiten vergleichen': { main: [[{ node: 'Fall speichern', type: 'main', index: 0 }]] },
+    'Zeiten vergleichen': { main: [[{ node: 'Webseite holen', type: 'main', index: 0 }]] },
+  'Webseite holen': { main: [[{ node: 'Webseite auswerten', type: 'main', index: 0 }]] },
+  'Webseite auswerten': { main: [[{ node: 'Fall speichern', type: 'main', index: 0 }]] },
   },
 };
 
@@ -494,7 +698,7 @@ const N_ = (name, x, y, w, h, farbe, text) => ({
   parameters: { color: farbe, width: w, height: h, content: text },
 });
 
-workflow.nodes.push(...MAIL_NODES);
+workflow.nodes.push(...WEB_NODES, ...MAIL_NODES);
 Object.assign(workflow.connections, {
   'Fall speichern': { main: [[{ node: 'Zuständige lesen', type: 'main', index: 0 }]] },
   'Zuständige lesen': { main: [[{ node: 'Empfänger bestimmen', type: 'main', index: 0 }]] },

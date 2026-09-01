@@ -68,21 +68,75 @@ function jsonLdBloecke(html) {
   return bloecke;
 }
 
-/** Läuft durch verschachtelte Objekte/Arrays und sammelt alle Öffnungszeit-Angaben. */
+/**
+ * schema.org-Typen, die einen GASTRONOMIE-Betrieb beschreiben.
+ * Siehe https://schema.org/FoodEstablishment und Untertypen.
+ */
+const GASTRO_TYP = /^(FoodEstablishment|Restaurant|CafeOrCoffeeShop|Cafe|BarOrPub|Bakery|IceCreamShop|FastFoodRestaurant|Winery|Brewery|Distillery|NightClub)$/i;
+
+/**
+ * Typen, deren Öffnungszeiten NICHT die des Restaurants sind.
+ *
+ * ⚠️ Wichtig: auf Hotel-Webseiten beschreibt das JSON-LD meist das **Hotel**.
+ * Ohne diesen Filter kamen für ParkRestaurant, Restaurant Bellini und Brüngers
+ * Land-Wirtschaft jeweils "Mo–Sa 09:00–17:00" heraus — Rezeptions- bzw.
+ * Bürozeiten, nicht die des Lokals. Daraus wären Fälle geworden, die den
+ * Beteiligten die falsche Frage stellen.
+ */
+const NICHT_GASTRO_TYP = /^(Hotel|LodgingBusiness|Motel|Hostel|BedAndBreakfast|Resort|Campground|Organization|Corporation|LocalBusiness|Store|TouristAttraction|TouristInformationCenter|WebSite|WebPage)$/i;
+
+/** Der @type eines Knotens als Liste (kann String, Array oder URL sein). */
+function typenVon(knoten) {
+  const roh = knoten['@type'];
+  const liste = Array.isArray(roh) ? roh : [roh];
+  return liste
+    .filter((t) => typeof t === 'string')
+    .map((t) => t.split(/[/#]/).pop().trim());
+}
+
+/**
+ * Läuft durch verschachtelte Objekte/Arrays und sammelt alle Öffnungszeit-Angaben —
+ * jeweils mit dem @type des Knotens, an dem sie hängen.
+ */
 function sammleAngaben(knoten, treffer = [], tiefe = 0) {
   if (!knoten || typeof knoten !== 'object' || tiefe > 8) return treffer;
   if (Array.isArray(knoten)) {
     for (const k of knoten) sammleAngaben(k, treffer, tiefe + 1);
     return treffer;
   }
+  const typen = typenVon(knoten);
   if (knoten.openingHoursSpecification) {
-    treffer.push({ art: 'spec', wert: knoten.openingHoursSpecification });
+    treffer.push({ art: 'spec', wert: knoten.openingHoursSpecification, typen });
   }
   if (knoten.openingHours) {
-    treffer.push({ art: 'string', wert: knoten.openingHours });
+    treffer.push({ art: 'string', wert: knoten.openingHours, typen });
   }
   for (const wert of Object.values(knoten)) sammleAngaben(wert, treffer, tiefe + 1);
   return treffer;
+}
+
+/**
+ * Wählt aus, welche Angaben zählen: Gastronomie-Typen haben Vorrang. Gibt es nur
+ * Hotel-/Organisationsangaben, wird NICHTS zurückgegeben — eine falsche Auskunft
+ * ist schlechter als keine.
+ *
+ * @returns {{angaben: Array, quelle: string}|null}
+ */
+function waehleAngaben(alle) {
+  const gastro = alle.filter((a) => a.typen.some((t) => GASTRO_TYP.test(t)));
+  if (gastro.length) return { angaben: gastro, quelle: 'schema.org (' + gastro[0].typen.join('/') + ')' };
+
+  // Angaben ohne Typ sind nur brauchbar, wenn die Seite nicht ohnehin ein Hotel
+  // oder eine Organisation beschreibt — sonst gehören sie mit hoher
+  // Wahrscheinlichkeit auch dazu.
+  const fremdVorhanden = alle.some((a) => a.typen.some((t) => NICHT_GASTRO_TYP.test(t)));
+  const ohneTyp = alle.filter((a) => a.typen.length === 0);
+  if (ohneTyp.length && !fremdVorhanden) {
+    return { angaben: ohneTyp, quelle: 'schema.org (ohne Typangabe)' };
+  }
+
+  const fremd = [...new Set(alle.flatMap((a) => a.typen))].join('/');
+  return { angaben: [], quelle: 'verworfen: nur ' + fremd + ' — keine Gastronomie-Zeiten' };
 }
 
 /** "Mo-Fr 11:00-22:00" / "Sa 12:00-23:00" — die String-Schreibweise von schema.org. */
@@ -151,9 +205,13 @@ function setzeSpanne(tagObj, von, bis) {
  * @returns {{woche: Object, quelle: string, rohAngaben: number}|null}
  */
 function ausJsonLd(html) {
-  const angaben = [];
-  for (const block of jsonLdBloecke(html)) sammleAngaben(block, angaben);
-  if (angaben.length === 0) return null;
+  const alle = [];
+  for (const block of jsonLdBloecke(html)) sammleAngaben(block, alle);
+  if (alle.length === 0) return null;
+
+  const auswahl = waehleAngaben(alle);
+  if (!auswahl.angaben.length) return { woche: null, quelle: auswahl.quelle, verworfen: true };
+  const angaben = auswahl.angaben;
 
   const woche = N.leereWoche();
   let erkannt = false;
@@ -196,7 +254,7 @@ function ausJsonLd(html) {
   // Tage ohne Angabe gelten als geschlossen — schema.org listet nur Öffnungstage.
   for (const t of N.TAGE) if (woche[t].status === 'unbekannt') woche[t].status = 'geschlossen';
 
-  return { woche, quelle: 'schema.org (JSON-LD)', rohAngaben: angaben.length };
+  return { woche, quelle: auswahl.quelle, rohAngaben: angaben.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -352,10 +410,17 @@ function unterseitenKandidaten(html, basisUrl, max = 2) {
 /** Wertet einen Seiten-Quelltext aus: erst JSON-LD, dann Textkandidaten. */
 function werteAus(html) {
   const jsonLd = ausJsonLd(html);
-  if (jsonLd) return { status: 'json-ld', woche: jsonLd.woche, quelle: jsonLd.quelle };
+  // `woche === null` heißt: es gab JSON-LD, aber nur Hotel-/Organisationszeiten.
+  // Dann NICHT als Fund gelten lassen, sondern mit den Textabschnitten
+  // weitermachen — dort steht oft doch das Lokal.
+  if (jsonLd && jsonLd.woche) {
+    return { status: 'json-ld', woche: jsonLd.woche, quelle: jsonLd.quelle };
+  }
   const kandidaten = textKandidaten(html);
-  if (kandidaten.length > 0) return { status: 'text', kandidaten };
-  return { status: 'kein-fund' };
+  if (kandidaten.length > 0) {
+    return { status: 'text', kandidaten, verworfen: jsonLd ? jsonLd.quelle : null };
+  }
+  return { status: 'kein-fund', verworfen: jsonLd ? jsonLd.quelle : null };
 }
 
 /**
