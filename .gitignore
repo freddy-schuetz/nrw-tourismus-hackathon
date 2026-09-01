@@ -23,3 +23,15 @@ backup/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backend-Export und daraus erzeugte Zuordnungstabellen:
+# enthalten dienstliche E-Mail-Adressen von Kolleg:innen — nicht ins Repo.
+oz-logik/daten/
+PAGES-PrintOnDemand_*.xlsx
+
+# Maschinenspezifisch / generiert
+.claude/launch.json
+*.tsbuildinfo
+
+# Event-Passwort für den buildbar-Deploy — nie ins Repo
+.event-passwort
