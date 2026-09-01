@@ -415,3 +415,72 @@ Export und erzeugte Tabellen enthalten dienstliche Mailadressen von Kolleg:innen
 unter `oz-logik/daten/` und sind zusammen mit `PAGES-PrintOnDemand_*.xlsx` per `.gitignore` vom
 Repo ausgeschlossen — das Frontend wird über ein GitHub-Repo veröffentlicht. Im Hackathon gehen
 Mails ausschließlich an eigene Adressen.
+
+---
+
+## Der Schreibweg — gefunden (01.09.2026)
+
+In der n8n-Instanz `n8n.oi.destination.one` ist ein **eigener Community-Node** installiert:
+`CUSTOM.destinationData`, typeVersion 1 — in 21 von 24 vorhandenen Workflows im Einsatz. Er kann
+lesen **und schreiben**. Damit ist der letzte offene Punkt des Vorhabens gelöst; die öffentlichen
+`rest.ashx`-Dienste bleiben nur lesend, der Weg führt über diesen Node.
+
+### Die drei Operationen
+
+```jsonc
+// 1. Suchen
+{ "resource": "search", "type": "Poi", "experience": "572",
+  "schema": { "value": "gl:Default" },        // gl:* liefert auch nicht zugewiesene Objekte
+  "q": "_Name:*Churpfalzpark*" }
+
+// 2. Objekt holen
+{ "resource": "quickedit", "type": "Poi", "id": "={{ $json._ObjectId }}",
+  "experience": "572", "schema": { "value": "minimal" } }
+
+// 3. Felder schreiben
+{ "resource": "quickedit", "operation": "quickedit-update-object-from-field-list",
+  "type": "Poi", "id": "={{ $json._id }}", "experience": "572",
+  "schema": { "value": "minimal" },
+  "changesUi": { "changesValues": [
+    { "field": "PRICE_CHILD", "value": "10" },
+    { "field": "OBJECT_TEXT_TEASER_SOMMER_HTML", "value": "Hallo", "mode": "set-lang:de-DE" }
+  ] } }
+```
+
+`mode: "set-lang:de-DE"` überschreibt in mehrsprachigen Feldern nur eine Sprache. Die Nodes
+tragen **keine eigenen Credentials** — die Anmeldung kommt aus der Instanz-Konfiguration.
+
+### ⚠️ quickedit benutzt interne Feldnamen, nicht `timeIntervals`
+
+Geschrieben wird über Feld-Codes wie `PRICE_CHILD`, `OBJECT_TEXT_TEASER_SOMMER_HTML`,
+`OBJECT_CONTACT_WEBSEITE1`, `DETAILS_INFOTEXT` — **nicht** über die `timeIntervals`-Struktur der
+Lese-Schnittstelle. Der Weg von unserem Normalformat zum Schreibformat ist damit noch nicht
+bekannt.
+
+### In der Instanz vorhandene Werte
+
+| | gefunden |
+|---|---|
+| `experience` | `572` (12×), `20844` (6×), `18738` (1×) — **keiner davon nachweislich teutoburgerwald** |
+| `type` | `Poi` (14×), `Veranstaltung` (6×) — **`Gastro` noch nie verwendet** |
+| `schema` | `minimal`, `gl:Default`, `hackathon-nrw` |
+
+### Drei Dinge, die noch fehlen
+
+1. **Die `experience`-Nummer für `teutoburgerwald`.** Die Lese-Schnittstelle nimmt den Namen, der
+   Node eine Zahl.
+2. **Ein quickedit-Schema, das die Öffnungszeit-Felder für Gastro freigibt.** Laut Sticky Note im
+   Referenz-Workflow: *„Felder müssen für diese API global (z. B. `minimal`) oder
+   kundenspezifisch (z. B. `open-data-nrw`) freigegeben werden."* Sind die Öffnungszeiten nicht
+   freigegeben, ist das eine **Konfigurationsaufgabe in destination.data**, kein Code-Problem.
+3. **Der Feldname der Öffnungszeiten in quickedit.** Ermittelbar, indem man die
+   quickedit-GET-Operation für einen Gastro-Datensatz **ohne** „Select Fields" ausführt — dann
+   listet sie die verfügbaren Spalten (ebenfalls aus den Sticky Notes des Referenz-Workflows).
+
+### Referenz-Workflows in der Instanz
+
+| ID | Name |
+|---|---|
+| `gdpLl4jiL3UIPrFp` | Lesen/Schreiben in one.data — die sauberste Vorlage (suchen · holen · schreiben) |
+| `GbcICEJNEQ9v56J4` | Veranstaltung in one.data anlegen oder aktualisieren (aktiv, mit Dublettenprüfung) |
+| `fCXK1xaOouuk4sQC` | one.data: Veranstaltung schreiben (Sub-Workflow) — Muster für `oz-schreiben` |

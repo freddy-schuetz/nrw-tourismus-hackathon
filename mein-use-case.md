@@ -105,8 +105,13 @@ unnötigen Mail liest kein kommunaler Touristiker die dritte.
 - ~~Bearbeiter-Mailadressen~~ — **gelöst** durch den Backend-Export
   `PAGES-PrintOnDemand_20260901095241.xlsx`: `Erstellt durch` und `Letzte Änderung durch` sind zu
   100 % gefüllt. Eingelesen von [oz-logik/zustaendige.js](oz-logik/zustaendige.js).
-- **Schreibweg nach destination.data** — der letzte offene Punkt. Bis dahin erzeugt
-  [oz-logik/arbeitsliste.js](oz-logik/arbeitsliste.js) die geprüfte Änderungsliste.
+- ~~Schreibweg nach destination.data~~ — **gefunden**: der Node `CUSTOM.destinationData` in der
+  n8n-Instanz kann schreiben (`resource: quickedit`,
+  `operation: quickedit-update-object-from-field-list`). Vorlage:
+  Workflow `gdpLl4jiL3UIPrFp`. Es fehlen noch drei Angaben: die `experience`-**Nummer** für
+  `teutoburgerwald`, ein quickedit-**Schema**, das die Öffnungszeit-Felder für Gastro freigibt,
+  und der **Feldname** der Öffnungszeiten in quickedit. Details in
+  [docs/destination-data-felder.md](docs/destination-data-felder.md).
 - **Google-API-Schlüssel** — Stufe 2, nicht blockierend.
 
 Vollständiger Bauplan: `~/.claude/plans/ich-m-chte-gerne-in-bright-bengio.md`
