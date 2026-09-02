@@ -19,7 +19,14 @@ const env = konfig.mcpServers['n8n-mcp'].env;
 const BASIS = env.N8N_API_URL.replace(/\/$/, '');
 const KEY = env.N8N_API_KEY;
 
-const TABELLE_FAELLE = 'ZqtInTqjOEJBFtba';
+// Die IDs der Data Tables kommen aus tabellen.json — erzeugt von
+// oz-logik/baue-tabellen.js. So lässt sich der Ablauf auf eine andere
+// n8n-Instanz umziehen, ohne IDs im Quelltext zu suchen (siehe docs/uebergabe.md).
+const TABELLEN = require('./instanz').ladeTabellen();
+
+const TABELLE_FAELLE = TABELLEN.oz_faelle;
+const TABELLE_ANTWORTEN = TABELLEN.oz_antworten;
+const TABELLE_ZUSTAENDIGE = TABELLEN.oz_zustaendige;
 
 // --- Logik aus normalisieren.js übernehmen (ohne module.exports) ---------------
 const logik = (() => {
@@ -483,7 +490,7 @@ const WEB_NODES = [
 // oz-logik/ki-prompt-webseitentext.md dokumentiert. Bei Änderungen beide
 // Stellen angleichen.
 const KI_MODELL = 'claude-sonnet-5';
-const KI_CREDENTIAL = { id: 'sJv0tRWX448RbV34', name: 'one.intelligence account 47' };
+const KI_CREDENTIAL = require('./instanz').ladeCredential('ki');
 
 const WOCHENTAGE_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -1171,7 +1178,7 @@ const MAIL_NODES = [
     position: [600, 90], alwaysOutputData: true, executeOnce: true,
     parameters: {
       resource: 'row', operation: 'get',
-      dataTableId: { __rl: true, mode: 'id', value: 'jzo1cE3eKqLZE8Ln' },
+      dataTableId: { __rl: true, mode: 'id', value: TABELLE_ZUSTAENDIGE },
       filters: { conditions: [] }, returnAll: true,
     },
   },
@@ -1197,7 +1204,7 @@ const MAIL_NODES = [
     position: [1560, 90],
     parameters: {
       resource: 'row', operation: 'insert',
-      dataTableId: { __rl: true, mode: 'id', value: 'ugZId5KxR3sRnsOe' },
+      dataTableId: { __rl: true, mode: 'id', value: TABELLE_ANTWORTEN },
       columns: {
         mappingMode: 'defineBelow',
         value: Object.fromEntries([

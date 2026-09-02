@@ -20,9 +20,11 @@ const env = konfig.mcpServers['n8n-mcp'].env;
 const BASIS = env.N8N_API_URL.replace(/\/$/, '');
 const KEY = env.N8N_API_KEY;
 
-const TABELLE_FAELLE = 'ZqtInTqjOEJBFtba';
-const TABELLE_ANTWORTEN = 'ugZId5KxR3sRnsOe';
-const TABELLE_ERGEBNISSE = '21sGs7vXDCiVDKhF';
+// IDs der Data Tables aus tabellen.json — siehe oz-logik/baue-tabellen.js.
+const TABELLEN = require('./instanz').ladeTabellen();
+const TABELLE_FAELLE = TABELLEN.oz_faelle;
+const TABELLE_ANTWORTEN = TABELLEN.oz_antworten;
+const TABELLE_ERGEBNISSE = TABELLEN.oz_ergebnisse;
 
 const tabelle = (id) => ({ __rl: true, mode: 'id', value: id });
 

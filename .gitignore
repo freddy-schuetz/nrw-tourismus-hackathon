@@ -35,3 +35,8 @@ PAGES-PrintOnDemand_*.xlsx
 
 # Event-Passwort für den buildbar-Deploy — nie ins Repo
 .event-passwort
+
+# Data-Table-IDs gelten nur fuer eine bestimmte n8n-Instanz.
+# Erzeugt von oz-logik/baue-tabellen.js — siehe docs/uebergabe.md.
+oz-logik/tabellen.json
+oz-logik/credentials.json

@@ -21,8 +21,10 @@ const env = konfig.mcpServers['n8n-mcp'].env;
 const BASIS = env.N8N_API_URL.replace(/\/$/, '');
 const KEY = env.N8N_API_KEY;
 
-const TABELLE_FAELLE = 'ZqtInTqjOEJBFtba';
-const TABELLE_ANTWORTEN = 'ugZId5KxR3sRnsOe';
+// IDs der Data Tables aus tabellen.json — siehe oz-logik/baue-tabellen.js.
+const TABELLEN = require('./instanz').ladeTabellen();
+const TABELLE_FAELLE = TABELLEN.oz_faelle;
+const TABELLE_ANTWORTEN = TABELLEN.oz_antworten;
 
 const logik = (() => {
   const q = fs.readFileSync(path.join(HIER, 'normalisieren.js'), 'utf8');
