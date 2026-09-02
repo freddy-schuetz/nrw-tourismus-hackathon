@@ -1,0 +1,13 @@
+{
+  "name": "oeffnungszeiten-abgleich-werkzeuge",
+  "private": true,
+  "description": "Nur fuer die Bauskripte in oz-logik/. Das Frontend hat sein eigenes package.json in frontend-starter/.",
+  "scripts": {
+    "praesentation": "node oz-logik/baue-praesentation.js docs/praesentation/Oeffnungszeiten-Abgleich.pptx",
+    "use-case-seite": "node oz-logik/baue-use-case-seite.js",
+    "test": "node oz-logik/ki-auswertung-test.js && node oz-logik/baue-n8n-bundle.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  }
+}
