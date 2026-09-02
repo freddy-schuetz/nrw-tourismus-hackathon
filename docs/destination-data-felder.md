@@ -915,6 +915,33 @@ Deployt aus `TobiasValentien/oeffnungszeiten-abgleich` (Branch `main`) über
 `deploy.buildbar.de`. Über HTTPS mit echtem Token geprüft: Betrieb wird geladen, beide Fassungen
 stehen zur Auswahl, freie Eingabe da, Gäste-Link da, **kein** Bearbeitungslink.
 
+### ⚠️ Die deployId gehört aufgeschrieben — sonst wandert die Adresse
+
+```
+deployId: 0755d4401d8c7220e7     →  https://app-0755d440.buildbar.de
+```
+
+Die Adresse ist die **ersten acht Zeichen der deployId**. Ein erneuter Aufruf von `/prepare`
+liefert eine **neue** deployId und damit eine **neue** Adresse — und die alte steckt in
+`FRAGEBOGEN_BASIS` in `OZ-1` und in jedem bereits verschickten Fragebogen-Link.
+
+Für ein Update also **nicht** `/prepare` wiederholen, sondern direkt veröffentlichen:
+
+```bash
+curl -s -X POST https://deploy.buildbar.de/publish \
+  -d deployId=0755d4401d8c7220e7 \
+  -d base_dir=frontend-starter \
+  -d password="$(cat .event-passwort)" \
+  --data-urlencode 'env=NEXT_PUBLIC_N8N_BASE=https://n8n.oi.destination.one'
+```
+
+Der Deploy-Key am Repo bleibt derselbe und muss nicht erneut angelegt werden. Falls die deployId
+doch einmal verloren geht: sie steht im **Titel des Deploy-Keys** am Repo —
+`gh api repos/<owner>/<name>/keys` zeigt `buildbar-deploy-<deployId>`.
+
+Ein Update braucht rund **drei Minuten**; in dieser Zeit antwortet die Adresse mit 404, kurz vor
+dem Ende einmal mit 502. Das ist normal und kein Fehlschlag.
+
 `FRAGEBOGEN_BASIS` in `OZ-1` zeigt jetzt auf diese Adresse — die Fragebogen-Links in den
 Anfrage-Mails funktionieren damit für jeden.
 
