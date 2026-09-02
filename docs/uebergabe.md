@@ -39,11 +39,16 @@ Risiko ist, dass die Hackathon-Infrastruktur abgeschaltet wird: die n8n-Instanz
 ```bash
 git clone <dein-repo> && cd <ordner>
 node --version    # 20 oder neuer
+unzip -v          # nur nötig für Schritt 6a (Zuständige einlesen)
 ```
 
 Auf einem Rechner ohne Administratorrechte lässt sich Node portabel ins
 Benutzerprofil legen; dann müssen die Pfade in `.mcp.json` und
 `.claude/launch.json` absolut sein.
+
+`unzip` braucht nur `oz-logik/zustaendige.js` — es liest den xlsx-Export ohne
+Fremdbibliothek, und ein xlsx ist ein ZIP mit XML darin. Unter Windows ist `unzip`
+nicht vorinstalliert; es kommt zum Beispiel mit Git Bash mit.
 
 ### 2. `.mcp.json` auf die neue n8n-Instanz zeigen lassen
 
@@ -131,6 +136,26 @@ notieren. Für spätere Änderungen dann `--update <id>`.
 `--update` überschreibt Handarbeit. Der Bau bricht ab, wenn beide Module denselben
 Funktionsnamen belegen.
 
+### 6a. Die Zuständigen neu einlesen — der Export ist NICHT im Repo
+
+⚠️ **Das ist die einzige Stelle, an der du Daten von außen brauchst.** Die Tabelle
+`oz_zustaendige` ordnet jedem Datensatz Ersteller- und Bearbeiter-Mail zu. Diese
+Felder liefert die öffentliche Lese-Schnittstelle **nicht** (`author` ist in 0 von
+600 Datensätzen gefüllt), sie kommen aus einem Export des destination.data-Backends.
+
+Der Export liegt **absichtlich nicht im Repo** — er enthält echte Mailadressen der
+kommunalen Touristiker:innen, also personenbezogene Daten. `.gitignore` schließt
+`PAGES-PrintOnDemand_*.xlsx` aus. Wer umzieht, muss ihn also **neu exportieren**,
+nicht im Repo suchen.
+
+```bash
+node oz-logik/zustaendige.js "PAGES-PrintOnDemand_<datum>.xlsx"
+```
+
+Fehlt dieser Schritt, läuft der Ablauf trotzdem: die Anfragen gehen dann an den
+Gastronomen und an die Redaktion als Rückfall, nur nicht an die namentlich
+zuständige Person.
+
 ### 6. Prüfen, ohne etwas auszulösen
 
 ```bash
@@ -185,8 +210,9 @@ Vor dem ersten echten Versand:
 | | |
 |---|---|
 | **Inhalt der Data Tables** | Fälle und Tokens gelten nur für einen Lauf. Auf der neuen Instanz einfach neu laufen lassen. |
-| **`oz_zustaendige`** | Kommt aus einem Export des destination.data-Backends (Datensatz-ID, Ersteller-Mail, Bearbeiter-Mail). Die Lese-Schnittstelle liefert diese Felder nicht — `author` ist in 0 von 600 Datensätzen gefüllt. Einlesen mit `node oz-logik/zustaendige.js`. |
+| **`oz_zustaendige`** | Braucht einen frischen Export aus dem destination.data-Backend — siehe Schritt 6a. Der alte Export liegt bewusst nicht im Repo (personenbezogene Daten). |
 | **Geheimnisse in Credentials** | Nicht exportierbar, immer neu eintragen. |
+| **`backup/`** | Der Hook sichert jede Workflow-Änderung nach `backup/workflow-changes/` — der Ordner ist **gitignored und liegt nur auf diesem Rechner**. Kein Verlust, weil die Workflows aus den Bauskripten reproduzierbar sind; man sollte sich nur nicht darauf verlassen. |
 | **quickedit-Schreibrechte** | Organisatorisch, nicht technisch. Braucht einen technischen Benutzer mit Rechten nur auf den eigenen Mandanten und nur auf Öffnungszeiten. |
 
 ---

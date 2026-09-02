@@ -185,6 +185,58 @@ alle temporären Test-Webhooks entfernt.
 
 ---
 
+## Unabhängige Gegenprüfung
+
+Die Küchenzeiten-Erweiterung zieht sich über vier Bausteine (OZ-1, OZ-2, OZ-3, Frontend) und
+führt einen neuen Vertrag zwischen ihnen ein. Weil man für eigene Fehler blind wird, wurde der
+Stand von unabhängigen Prüfern gegengelesen — jeder Befund anschließend von zweiter Seite mit dem
+ausdrücklichen Auftrag, ihn zu **widerlegen**.
+
+| | |
+|---|---|
+| Geprüfte Dimensionen | Vertragstreue zwischen den Bausteinen · Korrektheit an Randfällen · Verluste beim Zurückholen der Quittung · Oberfläche und Barrierefreiheit |
+| Gemeldete Befunde | 12 |
+| Widerlegt | 8 |
+| **Bestätigt und behoben** | **4** |
+
+Die vier bestätigten Befunde:
+
+| Schwere | Befund |
+|---|---|
+| hoch | Die „geschlossen"-Kästchen hießen für einen Screenreader **vierzehnmal** nur „geschlossen" — ohne Wochentag und ohne Hinweis, ob Öffnungs- oder Küchenzeiten gemeint sind. Der Kommentar im Code behauptete das Gegenteil; die Legende steckte nur in den Zeit-Feldern. |
+| mittel | „Genauso wie die Öffnungszeiten" als Prosa in der Zeiten-Spalte (siehe oben) |
+| mittel | Fehlermeldungen wurden nicht angekündigt — wer die Seite nicht sieht, merkte nicht, warum das Absenden nichts tut. Jetzt `role="alert"`. |
+| niedrig | Die Radio-Gruppe zur Küche hatte keinen eigenen Namen; die Legende sagt nur „Noch eine Frage". |
+
+Dazu ein Nebenfund: die Anrede „vielen Dank für Ihre **Mithilfe**" für die Redaktion war beim
+Zurückholen der Quittung verlorengegangen — sonst hätte sich die Mail bei jemandem für eine
+Rückmeldung bedankt, die diese Person nicht abgegeben hat.
+
+---
+
+## Übertragbarkeit auf eine andere Instanz
+
+Zu Beginn standen die vier Data-Table-IDs an **neun** Stellen in drei Bauskripten, die
+Credential-ID an einer zehnten. Auf einer neuen n8n-Instanz existiert keine davon — ein Umzug
+hätte bedeutet, vier Tabellen samt aller Spalten von Hand anzulegen und zehn Stellen zu ersetzen.
+
+Jetzt:
+
+| | |
+|---|---|
+| `node oz-logik/baue-tabellen.js` | legt die vier Tabellen mit allen 44 Spalten an und schreibt die IDs nach `tabellen.json`. Wiederholbar, erkennt bestehende Tabellen am Namen, ergänzt nur fehlende Spalten, **löscht nie etwas**. `--pruefen` vergleicht ohne zu ändern. |
+| `oz-logik/instanz.js` | liest `tabellen.json` und `credentials.json` und nennt im Fehlerfall den fehlenden Befehl |
+| `credentials.json.example` | Vorlage; enthält nur IDs und Namen, **keine Geheimnisse** |
+| [uebergabe.md](uebergabe.md) | Umzug in acht Schritten, für jemanden ohne Kenntnis dieses Projekts |
+
+**Kein einziges hartes ID mehr im Quelltext.** Geprüft: alle drei Workflows aus den umgestellten
+Skripten neu ausgerollt, alle **zwölf** Data-Table-Nodes zeigen auf die richtige Tabelle; beide
+Fehlerpfade ausgelöst; und der **Anlege-Pfad**, der beim Umzug zählt und zunächst nie ausgeführt
+worden war — vier Tabellen als `probe_*` erzeugt, Spalten mit den echten verglichen (18/10/9/7,
+identisch), Testtabellen wieder gelöscht.
+
+---
+
 ## Empfehlungen
 
 ### Vor dem ersten echten Betrieb zwingend
@@ -249,10 +301,32 @@ Zwei Muster, die über Öffnungszeiten hinausgehen und für sich Aufmerksamkeit 
   23:00 offen ist. Ebenso *Benni´s Kitchen*: `09:30` in der Datenbank, `11:00` auf der Webseite,
   und im Küchen-Freitext steht „Frühstück: 09:30-11:30".
 
-  **Empfehlung:** Der Fragebogen sollte für diese Fälle eine zweite Frage stellen —
-  „Geöffnet: ___ / Warme Küche: ___". Ein Klick mehr für den Betrieb, und der Ablauf füllt
-  nebenbei ein Feld, das bei 995 Betrieben leer ist. Damit beantwortet der Datenpool die Frage,
-  die der Gast tatsächlich stellt. Noch nicht gebaut.
+  **Daraus wurde eine zweite Frage im Fragebogen — gebaut und live** (siehe unten). Ein Klick
+  mehr für den Betrieb, und der Ablauf füllt nebenbei ein Feld, das bei 995 Betrieben leer ist.
+  Damit beantwortet der Datenpool die Frage, die der Gast tatsächlich stellt.
+- **Die Zusatzfrage nach der warmen Küche** — die Antwort auf den Befund darüber.
+
+  Gefragt wird **nur dort, wo es etwas zu holen gibt**: das strukturierte Küchenfeld ist leer,
+  im Freitext stehen aber Küchenzeiten. Im Lauf über 1161 Datensätze traf das auf **9 von 49
+  Fällen** zu; alle anderen sehen den Fragebogen unverändert kurz. Ein Fragebogen, der länger
+  wird, wird seltener ausgefüllt.
+
+  Vier Antworten, **„Überspringen" ist vorausgewählt**: wie die Öffnungszeiten · andere Zeiten
+  (mit Wochentagsfeldern) · keine warme Küche · überspringen. Freie Zeiten laufen durch dieselben
+  harten Regeln wie die Öffnungszeiten.
+
+  In `OZ-3` gilt eine **mildere** Entscheidungsregel als bei den Öffnungszeiten, weil die Angabe
+  freiwillig ist: bei Uneinigkeit zählt der Gastronom, bei echtem Widerspruch bleibt das Feld
+  **leer** — eine falsche Küchenzeit ist schlechter als keine. Die Quittung erwähnt sie nur, wenn
+  wirklich jemand geantwortet hat.
+
+  ⚠️ Ein Fund aus der Gegenprüfung: „Genauso wie die Öffnungszeiten" landete zunächst als
+  **Prosa** in derselben Spalte wie echte Zeiten. Sagt eine Person „wie oben" und eine zweite
+  tippt exakt dieselben Zeiten ein, galt das als Widerspruch — und die gewonnene Küchenzeit wurde
+  verworfen. Ausgerechnet bei der wahrscheinlichsten Antwort, denn die ganze Prämisse der Frage
+  ist, dass beide Zeiten oft dasselbe sind. `OZ-3` löst „wie oben" jetzt gegen die entschiedene
+  Fassung auf, **bevor** verglichen wird.
+
 - **`changed` taugt nicht als Maß für redaktionelle Pflege.** Nur 5 von 600 Datensätzen sind älter
   als 12 Monate; das Feld wird von technischen Importen mit angefasst. Der ursprünglich geplante
   Auslöser „nicht mehr aktualisiert seit 12 Monaten" hätte zehn Datensätze geprüft und wäre fertig
@@ -264,9 +338,14 @@ Zwei Muster, die über Öffnungszeiten hinausgehen und für sich Aufmerksamkeit 
 
 **Status: BEDINGT FREIGEGEBEN**
 
-Erkennung, Normalisierung, Vergleich über drei Quellen, Fragebogen, Auswertung, Plausibilität und
-Entscheidung sind gebaut, validiert und gegen den echten Datenbestand gemessen — mit 0 erfundenen
-Zeiten und 9 von 9 bestätigten Fällen in der Gegenprobe von Hand.
+Erkennung, Normalisierung, Vergleich über drei Quellen, Fragebogen samt Zusatzfrage nach der
+warmen Küche, Auswertung, Plausibilität und Entscheidung sind gebaut, validiert und gegen den
+echten Datenbestand gemessen — mit 0 erfundenen Zeiten und 8 von 8 bestätigten Fällen in der
+Gegenprobe von Hand. Ein Folgelauf hat gezeigt, dass **niemand zweimal gefragt wird**: 48 offene
+Fälle wurden übersprungen.
+
+Der Ablauf ist auf eine andere n8n-Instanz **übertragbar** — kein hartes ID mehr im Quelltext, der
+Anlege-Pfad der Data Tables ist ausgeführt und gegen die laufende Struktur verglichen.
 
 **Nicht freigegeben ist der Versand an echte Empfänger** (Punkte 2 bis 5) und **das Schreiben nach
 destination.data** (Punkt 1). Beides ist bewusst verriegelt, nicht vergessen: Der Ablauf verschickt
