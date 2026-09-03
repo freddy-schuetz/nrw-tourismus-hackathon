@@ -70,11 +70,11 @@ export default function Home() {
       )}
 
       <p className="text-sm text-gray-500">
-        Optionaler KI-Chat (Muster C):{" "}
-        <a href="/chat" className="text-brand underline">
-          /chat
+        Öffnungszeiten-Fragebogen ansehen:{" "}
+        <a href="/fragebogen?token=demo" className="text-brand underline">
+          Vorschau mit Beispieldaten
         </a>{" "}
-        (braucht <code>ANTHROPIC_API_KEY</code>).
+        — im Echtbetrieb kommt der Link mit persönlichem Zugangscode per E-Mail.
       </p>
     </main>
   );
