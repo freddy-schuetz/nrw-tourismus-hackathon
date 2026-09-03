@@ -40,3 +40,24 @@ PAGES-PrintOnDemand_*.xlsx
 # Erzeugt von oz-logik/baue-tabellen.js — siehe docs/uebergabe.md.
 oz-logik/tabellen.json
 oz-logik/credentials.json
+
+# cobra-Aktualitätscheck — NICHT in dieses Repo.
+# "origin" ist das oeffentliche Hackathon-Repo
+# (github.com/freddy-schuetz/nrw-tourismus-hackathon, PUBLIC).
+# Der Ordner enthaelt interne Infrastruktur, die dort nicht hingehoert:
+#   - Name, interne IP und Port des SQL-Servers
+#   - Datenbanknamen des CRM
+#   - einen Sicherheitsbefund zur Anmeldung der cobra-Arbeitsplaetze
+#   - Befundlisten mit echten Namen, Anschriften und E-Mail-Adressen
+# Fuer die Versionierung ein privates Repo verwenden (z. B. das Remote "meins").
+# (Der Servername stand hier frueher ausgeschrieben - in einem oeffentlichen
+#  Repo veroeffentlicht der Hinweis selbst genau das, wovor er warnt.)
+cobra-aktualitaetscheck/
+
+# Wissensspeicher — aus demselben Grund NICHT in dieses Repo.
+# Die Skripte tragen den Namen des internen Dateiservers und den Pfad der
+# Tourismus-Freigabe fest im Quelltext (einlesen.py, fotos_einlesen.py,
+# README.md). Der Suchindex und die Vorschaubilder liegen ohnehin unter
+# wissensspeicher/index/ und bleiben lokal.
+# Auch hier gilt: fuer die Versionierung ein privates Repo verwenden.
+wissensspeicher/
